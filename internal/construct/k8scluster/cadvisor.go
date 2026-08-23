@@ -96,6 +96,12 @@ func emitCAdvisor(
 					"node":      node,
 					"pod":       pod,
 				}
+				if cl.K8sMonitoring.Features["promote_namespace_to_service_namespace"] {
+					// Models an explicit collector relabel rule. Raw cAdvisor omits this
+					// application ownership label, so the default signal shape stays unchanged.
+					ctrLabels["service_namespace"] = ns
+					netLabels["service_namespace"] = ns
+				}
 
 				c := nodeexp.Container{
 					CPURequest: resolveCPUUsageBase(fwl, deploy),

@@ -65,7 +65,7 @@ The blueprint YAML document. Strict-decoded: any key not listed here fails to lo
 | `environments[].cluster.k8s_monitoring.alloy_version` | string |  | human form ("1.16.3"); canonicalized to "v1.16.3" |
 | `environments[].cluster.k8s_monitoring.opencost` | bool |  |  |
 | `environments[].cluster.k8s_monitoring.kepler` | bool |  |  |
-| `environments[].cluster.k8s_monitoring.features` | map[string]bool |  | Features gates which Alloy collectors a real k8s-monitoring deploy would create. Keys: cluster_metrics, cluster_events, pod_logs, node_logs, profiling, application_observability. Absent/false ⇒ that collector role is not deployed. |
+| `environments[].cluster.k8s_monitoring.features` | map[string]bool |  | Features gates which Alloy collectors a real k8s-monitoring deploy would create. Keys: cluster_metrics, cluster_events, pod_logs, node_logs, profiling, application_observability, promote_namespace_to_service_namespace. The promotion key models an explicit collector relabel rather than a collector role. Absent/false means the raw cAdvisor label shape remains unchanged. |
 | `environments[].cluster.k8s_monitoring.metrics_replicas` | int |  | MetricsReplicas is the alloy-metrics StatefulSet replica count (does NOT scale with nodes). 0 ⇒ default 1. |
 | `environments[].cluster.k8s_monitoring.receiver_as_daemonset` | bool |  | ReceiverAsDaemonset models alloy-receiver as a per-node DaemonSet instead of the synth default (a single Deployment). |
 | `environments[].cluster.k8s_monitoring.fleet_management` | bool |  | FleetManagement, when true, registers this cluster's Alloy collectors with the FM API (a fleet_management construct instance is emitted from the cluster path). Requires Enabled. |

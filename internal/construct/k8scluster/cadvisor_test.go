@@ -80,3 +80,46 @@ func TestCAdvisorUsageVsRequestVaries(t *testing.T) {
 		t.Errorf("hot ratio %g not markedly above cold ratio %g (expected ~5x from 0.75 vs 0.15 util)", hotRatio, coldRatio)
 	}
 }
+
+func TestCAdvisorOwnershipLabelPromotionIsOptIn(t *testing.T) {
+	cl := coretest.Cluster()
+	mc := captureTick(t, cl)
+
+	for _, metric := range []string{
+		"container_fs_reads_bytes_total",
+		"container_network_receive_bytes_total",
+	} {
+		series := mc.Find(metric)
+		if len(series) == 0 {
+			t.Fatalf("no %s series", metric)
+		}
+		for _, item := range series {
+			if _, ok := item.Labels["service_namespace"]; ok {
+				t.Fatalf("%s unexpectedly carries service_namespace by default: %+v", metric, item.Labels)
+			}
+		}
+	}
+}
+
+func TestCAdvisorOwnershipLabelPromotionCopiesNamespace(t *testing.T) {
+	cl := coretest.Cluster()
+	cl.K8sMonitoring.Features = map[string]bool{
+		"promote_namespace_to_service_namespace": true,
+	}
+	mc := captureTick(t, cl)
+
+	for _, metric := range []string{
+		"container_fs_reads_bytes_total",
+		"container_network_receive_bytes_total",
+	} {
+		series := mc.Find(metric)
+		if len(series) == 0 {
+			t.Fatalf("no %s series", metric)
+		}
+		for _, item := range series {
+			if got, want := item.Labels["service_namespace"], item.Labels["namespace"]; got != want || got == "" {
+				t.Errorf("%s service_namespace=%q namespace=%q; want equal non-empty ownership labels", metric, got, want)
+			}
+		}
+	}
+}

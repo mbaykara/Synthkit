@@ -573,7 +573,10 @@ note: "Integration-allowlist extras (node_md_disks*, node_systemd_*, node_memory
 > see `signals/host.md [slug: host-docker]`.
 
 Container-scoped series add `id` (cgroup path), `image`, `name` (containerd hash), `node`, `pod`,
-`namespace`, `container` (high-card `id`/`name` flagged above).
+`namespace`, `container` (high-card `id`/`name` flagged above). Raw cAdvisor has no
+`service_namespace`. A blueprint may model an explicit collector relabel with
+`k8s_monitoring.features.promote_namespace_to_service_namespace: true`; in that opt-in shape,
+container and pod-network series also carry `service_namespace=<namespace>`.
 
 | metric | type | extra labels | note |
 |---|---|---|---|
@@ -598,6 +601,7 @@ labels:
   source: kubernetes
   # container-scoped series additionally carry: id, image, name, node, pod, namespace, container
   # pod-scoped network series carry: interface (NOT container)
+  # optional collector enrichment: service_namespace=<namespace> on both shapes
 metrics:
   - {root: container_cpu_usage_seconds_total, type: counter, unit: seconds, v: ok, note: "cpu=total only — no per-core breakdown (containerd/EKS)"}
   - {root: container_cpu_cfs_periods_total, type: counter, unit: count, v: ok}
