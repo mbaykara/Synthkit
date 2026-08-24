@@ -147,7 +147,7 @@ func (w *Workload) tickProfiles(ctx context.Context, now time.Time, world *core.
 				prof = builder.Build(pt, load)
 			}
 
-			labels := profileLabelsApp(pt, id.service, id.env, runtime)
+			labels := profileLabelsApp(pt, id.service, id.namespace, id.env, runtime)
 			series = append(series, psink.Series{
 				Labels:  labels,
 				Profile: prof,
@@ -200,11 +200,12 @@ func nodeSpanIDs(reqs []*ledger.Request, nodeName, entryName string, hasServerSp
 // Always includes __name__ and __profile_type__.
 // Do NOT add source label here — its absence is the SDK-push discriminator.
 // Do NOT add the blueprint label here — stampedProfiles adds it via the scoped writer.
-func profileLabelsApp(pt pyroscope.ProfileType, serviceName, env, runtime string) []psink.LabelPair {
+func profileLabelsApp(pt pyroscope.ProfileType, serviceName, serviceNamespace, env, runtime string) []psink.LabelPair {
 	labels := []psink.LabelPair{
 		{Name: "__name__", Value: pt.Name},
 		{Name: "__profile_type__", Value: pt.Selector()},
 		{Name: "service_name", Value: serviceName},
+		{Name: "service_namespace", Value: serviceNamespace},
 	}
 	switch runtime {
 	case "go":

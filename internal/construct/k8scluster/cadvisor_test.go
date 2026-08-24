@@ -101,7 +101,7 @@ func TestCAdvisorOwnershipLabelPromotionIsOptIn(t *testing.T) {
 	}
 }
 
-func TestCAdvisorOwnershipLabelPromotionCopiesNamespace(t *testing.T) {
+func TestCAdvisorOwnershipLabelPromotionAddsCanonicalIdentity(t *testing.T) {
 	cl := coretest.Cluster()
 	cl.K8sMonitoring.Features = map[string]bool{
 		"promote_namespace_to_service_namespace": true,
@@ -119,6 +119,12 @@ func TestCAdvisorOwnershipLabelPromotionCopiesNamespace(t *testing.T) {
 		for _, item := range series {
 			if got, want := item.Labels["service_namespace"], item.Labels["namespace"]; got != want || got == "" {
 				t.Errorf("%s service_namespace=%q namespace=%q; want equal non-empty ownership labels", metric, got, want)
+			}
+			if got := item.Labels["service_name"]; got != "test-api" {
+				t.Errorf("%s service_name=%q; want workload identity test-api", metric, got)
+			}
+			if got, want := item.Labels["deployment_environment_name"], cl.Env.Name; got != want || got == "" {
+				t.Errorf("%s deployment_environment_name=%q; want %q", metric, got, want)
 			}
 		}
 	}

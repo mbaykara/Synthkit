@@ -23,7 +23,7 @@ func (w *Workload) ProjectBatch(ctx context.Context, now time.Time, world *core.
 	if len(batch) == 0 {
 		return nil
 	}
-	if world.Traces != nil {
+	if w.cfg.tracesEnabled() && world.Traces != nil {
 		if err := w.projectTraces(ctx, world, batch); err != nil {
 			return err
 		}

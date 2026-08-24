@@ -205,7 +205,10 @@ profile_types:
 ## SDK push (no `source` label) [slug: profiles-sdk]
 
 SDK-push profiles do NOT carry a `source` label. The presence/absence of `source` is the sole
-discriminator between Alloy-collected and SDK-pushed profiles.
+discriminator between Alloy-collected and SDK-pushed profiles. Application SDKs may attach
+declared low-cardinality tags; synthkit's `app` workload attaches its declared
+`service_namespace` alongside `service_name` so profile identity matches its metrics, logs, and
+traces. This is an application-supplied tag, not an SDK-generated default.
 
 ### Go SDK (`pyroscope_spy="gospy"`) [slug: profiles-sdk-go]
 
@@ -238,6 +241,7 @@ scope: blueprint
 sink: pyroscope
 labels:
   service_name: <service-name>
+  service_namespace: <application-namespace>     # application-supplied low-cardinality tag
   env: <env-name>                        # e.g. <stack>/<env>
   version: <version>                     # e.g. dev
   pyroscope_spy: gospy
@@ -275,6 +279,7 @@ scope: blueprint
 sink: pyroscope
 labels:
   service_name: <service-name>
+  service_namespace: <application-namespace>     # application-supplied low-cardinality tag
   app_name: <app-name>
   language: python
   env: <env-name>                        # e.g. <stack>/<env>
@@ -293,9 +298,11 @@ profile_types:
 synthkit's SDK-push profiling lane (web_service + app workloads) emits the **captured Go and
 Python shapes faithfully** and restricts uncaptured runtimes conservatively:
 
-- **Go SDK**: full 11-type Go set with `pyroscope_spy=gospy`, `env`, `version` — matches
+- **Go SDK**: full 11-type Go set with `pyroscope_spy=gospy`, `env`, `version`, plus the app's
+  declared `service_namespace` tag — matches
   [slug: profiles-sdk-go] exactly.
-- **Python SDK**: `process_cpu` only with `language=python`, `env` — NO `version`, NO
+- **Python SDK**: `process_cpu` only with `language=python`, `env`, plus the app's declared
+  `service_namespace` tag — NO `version`, NO
   `pyroscope_spy` — matches [slug: profiles-sdk-python] (pyroscope-io 1.0.11) exactly.
 - **JVM/node/.NET SDK**: `process_cpu` only, minimal labels — UNCAPTURED shapes. The rich JVM
   profile types (`alloc_in_new_tlab_*`, Java `mutex:*:mutex:count`) are produced EXCLUSIVELY by

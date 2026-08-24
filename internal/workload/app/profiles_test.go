@@ -92,11 +92,12 @@ func buildPyroApp(t *testing.T) (*Workload, *ledger.Ledger) {
 		Traffic: Traffic{OffPeakRPS: 10, PeakRPS: 50},
 		Services: []ServiceNode{
 			{
-				Name:    "web",
-				Type:    "web",
-				Runtime: "go",
-				Entry:   true,
-				Calls:   []string{"db"},
+				Name:      "web",
+				Type:      "web",
+				Runtime:   "go",
+				Namespace: "test-app",
+				Entry:     true,
+				Calls:     []string{"db"},
 				Pyroscope: &pyroscope.ProfilingCfg{
 					Enabled:      true,
 					Runtime:      "go",
@@ -240,6 +241,9 @@ func TestAppPyroscope_ServiceNameIsNodeName(t *testing.T) {
 		svc := pyroLabelValue(s, "service_name")
 		if svc != "web" {
 			t.Errorf("series service_name=%q want \"web\" (only web node has pyroscope enabled)", svc)
+		}
+		if namespace := pyroLabelValue(s, "service_namespace"); namespace != "test-app" {
+			t.Errorf("series service_namespace=%q want \"test-app\"", namespace)
 		}
 	}
 }

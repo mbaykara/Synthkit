@@ -33,6 +33,8 @@ dual-promotion), `service_namespace`,
 `job`=`{service_namespace}/{service_name}`, `source="tempo"`, **`telemetry_sdk_language`** (∈
 {webjs,go,python,nodejs} — ⚠ **`calls_total` ONLY**).
 `asserts_*` labels added platform-side (do not emit); `instance` omitted/empty on Tempo-sourced series.
+For `app` nodes, `service_version` is omitted when no release version is declared; the workload
+does not fabricate a default release. `web_service` retains its historical default version.
 
 ```yaml signals
 family: traces_spanmetrics_calls_total
@@ -47,7 +49,7 @@ labels:
   status_code: STATUS_CODE_OK|STATUS_CODE_ERROR|STATUS_CODE_UNSET
   deployment_environment_name: <env>              # synthkit-native _name form (2026-06-23)
   service_namespace: <namespace>
-  service_version: <version>
+  service_version: <version>                       # omitted for app nodes without a declared version
   namespace: <k8s-namespace>
   cluster: <cluster-name>
   k8s_cluster_name: <cluster-name>
@@ -94,7 +96,7 @@ labels:
   status_code: STATUS_CODE_OK|STATUS_CODE_ERROR|STATUS_CODE_UNSET
   deployment_environment_name: <env>              # synthkit-native _name form (2026-06-23)
   service_namespace: <namespace>
-  service_version: <version>
+  service_version: <version>                       # omitted for app nodes without a declared version
   namespace: <k8s-namespace>
   cluster: <cluster-name>
   k8s_cluster_name: <cluster-name>
@@ -131,7 +133,7 @@ labels:
   status_code: STATUS_CODE_OK|STATUS_CODE_ERROR|STATUS_CODE_UNSET
   deployment_environment_name: <env>              # synthkit-native _name form (2026-06-23)
   service_namespace: <namespace>
-  service_version: <version>
+  service_version: <version>                       # omitted for app nodes without a declared version
   namespace: <k8s-namespace>
   cluster: <cluster-name>
   k8s_cluster_name: <cluster-name>
@@ -177,8 +179,8 @@ labels:
   server_k8s_namespace_name: <k8s-namespace>
   client_service_namespace: <namespace>
   server_service_namespace: <namespace>
-  client_service_version: <version>
-  server_service_version: <version>
+  client_service_version: <version>                # omitted for app nodes without a declared version
+  server_service_version: <version>                # omitted for app nodes without a declared version
   namespace: <k8s-namespace>    # client side
   service: <client-service>
   cluster: <cluster-name>
@@ -224,8 +226,8 @@ labels:
   server_k8s_namespace_name: <k8s-namespace>
   client_service_namespace: <namespace>
   server_service_namespace: <namespace>
-  client_service_version: <version>
-  server_service_version: <version>
+  client_service_version: <version>                # omitted for app nodes without a declared version
+  server_service_version: <version>                # omitted for app nodes without a declared version
   namespace: <k8s-namespace>
   service: <client-service>
   cluster: <cluster-name>
@@ -268,7 +270,7 @@ labels:
   blueprint: <blueprint>
   service_name: <service-name>
   service_namespace: <namespace>
-  service_version: <version>
+  service_version: <version>                       # omitted for app nodes without a declared version
   deployment_environment_name: <env>        # synthkit-native _name form (legacy deployment_environment dropped 2026-06-23)
   k8s_cluster_name: <cluster-name>
   k8s_namespace_name: <k8s-namespace>
@@ -290,7 +292,7 @@ labels:
   blueprint: <blueprint>
   service_name: <service-name>
   service_namespace: <namespace>
-  service_version: <version>
+  service_version: <version>                       # omitted for app nodes without a declared version
   deployment_environment_name: <env>        # synthkit-native _name form (2026-06-23)
   k8s_cluster_name: <cluster-name>
   k8s_namespace_name: <k8s-namespace>

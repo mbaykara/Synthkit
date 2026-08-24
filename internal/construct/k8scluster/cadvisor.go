@@ -97,10 +97,16 @@ func emitCAdvisor(
 					"pod":       pod,
 				}
 				if cl.K8sMonitoring.Features["promote_namespace_to_service_namespace"] {
-					// Models an explicit collector relabel rule. Raw cAdvisor omits this
-					// application ownership label, so the default signal shape stays unchanged.
+					// Models explicit collector enrichment. Raw cAdvisor omits these
+					// application identity labels, so the default signal shape stays unchanged.
 					ctrLabels["service_namespace"] = ns
 					netLabels["service_namespace"] = ns
+					ctrLabels["service_name"] = deploy
+					netLabels["service_name"] = deploy
+					if cl.Env != nil && cl.Env.Name != "" {
+						ctrLabels["deployment_environment_name"] = cl.Env.Name
+						netLabels["deployment_environment_name"] = cl.Env.Name
+					}
 				}
 
 				c := nodeexp.Container{

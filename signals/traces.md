@@ -106,12 +106,17 @@ correlation_fields:
 ## Resource attributes on every span [slug: traces-resource-attrs]
 
 `deployment.environment.name={env}` (synthkit-native; legacy `deployment.environment` dropped 2026-06-23), `service.name={placeholder}`,
-`service.namespace={k8s namespace}`, `service.version={semver}`. Backend spans additionally carry
+`service.namespace={k8s namespace}` and, when declared, `service.version={semver}`. An app node
+with no declared release version omits `service.version`; synthkit never invents release
+attribution. Backend spans additionally carry
 `k8s.cluster.name`, `k8s.namespace.name`, `k8s.pod.name`, `k8s.deployment.name`,
 `telemetry.sdk.language`, `telemetry.sdk.name="opentelemetry"`, and (when the workload has a node
 placement) **`k8s.node.name`** (omitted when empty, I13). Browser spans additionally:
 `telemetry.sdk.language=webjs`, `telemetry.sdk.name=opentelemetry`, `telemetry.distro.name=faro-web-sdk`,
 `telemetry.distro.version`, `browser.{language,mobile,platform}`, `gf.feo11y.app.id`, `gf.feo11y.app.name`.
+
+The `app` workload accepts `traces: false` to model an application that has not adopted tracing.
+Omitting the field preserves the historical enabled default and does not change trace shape.
 
 ## Correlation fields on every span (§1.4) [slug: traces-correlation]
 

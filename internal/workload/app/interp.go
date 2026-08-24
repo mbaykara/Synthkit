@@ -26,7 +26,7 @@ type nodeIdentity struct {
 	context   string // §5 canon (optional)
 	useCase   string // §5 canon (optional)
 	team      string // §5 canon (optional)
-	version   string // service.version (declared override or serviceVersion default)
+	version   string // declared service.version; empty means release attribution is absent
 }
 
 func (w *Workload) identity(n *node) nodeIdentity {
@@ -86,9 +86,11 @@ func (id nodeIdentity) resourceAttrs() map[string]any {
 	a := map[string]any{
 		semconv.AttrServiceName:               id.service,
 		semconv.AttrServiceNamespace:          id.namespace,
-		semconv.AttrServiceVersion:            id.version,
 		semconv.AttrDeploymentEnvironmentName: id.env,
 		"telemetry.sdk.name":                  "opentelemetry",
+	}
+	if id.version != "" {
+		a[semconv.AttrServiceVersion] = id.version
 	}
 	if id.cluster != "" {
 		a["k8s.cluster.name"] = id.cluster

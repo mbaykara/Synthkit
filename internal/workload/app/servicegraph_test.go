@@ -126,6 +126,23 @@ func TestApp_SingleTraceAcrossGraph(t *testing.T) {
 	}
 }
 
+func TestApp_TraceLaneCanBeDisabled(t *testing.T) {
+	cfg := graphCfg()
+	cfg.Traces = ptr(false)
+	w := buildApp(t, cfg)
+	now := time.Date(2026, 6, 15, 13, 0, 0, 0, time.UTC)
+	traces := &coretest.TraceCapture{}
+	world := coretest.World(&coretest.MetricCapture{}, &coretest.LogCapture{}, traces)
+	r := w.m.mintOne(now, world.Shape)
+
+	if err := w.ProjectBatch(context.Background(), now, world, []*ledger.Request{r}); err != nil {
+		t.Fatalf("ProjectBatch: %v", err)
+	}
+	if len(traces.Resources) != 0 {
+		t.Fatalf("disabled trace lane emitted %d resources", len(traces.Resources))
+	}
+}
+
 func TestApp_PerNodeMetricsAndLogs(t *testing.T) {
 	w := buildApp(t, graphCfg())
 	now := time.Date(2026, 6, 15, 13, 0, 0, 0, time.UTC)

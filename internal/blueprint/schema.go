@@ -198,8 +198,9 @@ type K8sMonitoringDecl struct {
 	// Features gates which Alloy collectors a real k8s-monitoring deploy would create.
 	// Keys: cluster_metrics, cluster_events, pod_logs, node_logs, profiling,
 	// application_observability, promote_namespace_to_service_namespace. The promotion key
-	// models an explicit collector relabel rather than a collector role. Absent/false means
-	// the raw cAdvisor label shape remains unchanged.
+	// models explicit collector enrichment of cAdvisor series with service_namespace,
+	// service_name, and deployment_environment_name rather than a collector role.
+	// Absent/false means the raw cAdvisor label shape remains unchanged.
 	Features map[string]bool `yaml:"features"`
 	// MetricsReplicas is the alloy-metrics StatefulSet replica count (does NOT scale with
 	// nodes). 0 ⇒ default 1.

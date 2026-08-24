@@ -33,15 +33,16 @@ const (
 	kind     = "app"
 	interval = 60 * time.Second
 
-	// serviceVersion is the default semver stamped on service.version when a node declares no override.
+	// serviceVersion remains the fallback for signal lanes that do not carry a
+	// per-node release declaration. Application resource attribution below
+	// intentionally preserves an omitted version.
 	serviceVersion = "1.0.0"
 )
 
-// versionOr returns the node's declared version override, or the serviceVersion default when empty.
+// versionOr preserves an omitted service.version. Real applications frequently
+// lack release attribution; inventing 1.0.0 makes telemetry look more mature
+// than the application actually is.
 func versionOr(v string) string {
-	if v == "" {
-		return serviceVersion
-	}
 	return v
 }
 
@@ -52,6 +53,9 @@ type Config struct {
 	Services []ServiceNode `yaml:"services"`
 	// Traffic shapes the entry node's invocation volume (the correlated narrative sample).
 	Traffic Traffic `yaml:"traffic"`
+	// Traces controls the request trace lane for applications that have not yet
+	// adopted tracing. Nil preserves the historical default (enabled).
+	Traces *bool `yaml:"traces"`
 
 	// Models is the set of valid (model, provider) routings this app's requests draw from. The minter
 	// picks ONE pair per request and stamps it into the correlation, so the gen_ai spans + gateway
@@ -62,6 +66,10 @@ type Config struct {
 	// not affect the -dump inventory (I32). Values are blueprint-declared (customer model lists stay
 	// out of the catalog).
 	Models []ModelChoice `yaml:"models"`
+}
+
+func (c Config) tracesEnabled() bool {
+	return c.Traces == nil || *c.Traces
 }
 
 // ModelChoice is one valid (model, provider) routing — paired so a request never draws an impossible
@@ -135,8 +143,8 @@ type ServiceNode struct {
 	Context string `yaml:"context"`
 	UseCase string `yaml:"use_case"`
 	Team    string `yaml:"team"`
-	// Version overrides the default service.version (the released image-tag intent, §5). Empty ⇒ the
-	// serviceVersion default. Stamped on service.version (resource attr) + service_version (spanmetrics).
+	// Version declares service.version (the released image-tag intent, §5). Empty
+	// preserves missing release attribution in resource attrs and spanmetrics.
 	Version  string                     `yaml:"version"`
 	Routes   []string                   `yaml:"routes"`   // request routes "{METHOD} {path}"; on the entry → drawn per request into r.Route (default "GET /"), on a callee → names its SERVER span (else the node name)
 	Replicas int                        `yaml:"replicas"` // pods for the node cascade (default 2); per-node scaling §6.6

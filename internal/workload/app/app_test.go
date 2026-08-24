@@ -75,3 +75,15 @@ services:
 		t.Error("OmitChat = false, want true")
 	}
 }
+
+func TestResourceAttrsOmitUndeclaredServiceVersion(t *testing.T) {
+	withoutVersion := (nodeIdentity{service: "api", namespace: "orders"}).resourceAttrs()
+	if _, ok := withoutVersion["service.version"]; ok {
+		t.Fatal("undeclared service.version must be absent from OTLP resources")
+	}
+
+	withVersion := (nodeIdentity{service: "api", namespace: "orders", version: "2.4.1"}).resourceAttrs()
+	if got := withVersion["service.version"]; got != "2.4.1" {
+		t.Fatalf("service.version = %v, want 2.4.1", got)
+	}
+}

@@ -65,7 +65,7 @@ The blueprint YAML document. Strict-decoded: any key not listed here fails to lo
 | `environments[].cluster.k8s_monitoring.alloy_version` | string |  | human form ("1.16.3"); canonicalized to "v1.16.3" |
 | `environments[].cluster.k8s_monitoring.opencost` | bool |  |  |
 | `environments[].cluster.k8s_monitoring.kepler` | bool |  |  |
-| `environments[].cluster.k8s_monitoring.features` | map[string]bool |  | Features gates which Alloy collectors a real k8s-monitoring deploy would create. Keys: cluster_metrics, cluster_events, pod_logs, node_logs, profiling, application_observability, promote_namespace_to_service_namespace. The promotion key models an explicit collector relabel rather than a collector role. Absent/false means the raw cAdvisor label shape remains unchanged. |
+| `environments[].cluster.k8s_monitoring.features` | map[string]bool |  | Features gates which Alloy collectors a real k8s-monitoring deploy would create. Keys: cluster_metrics, cluster_events, pod_logs, node_logs, profiling, application_observability, promote_namespace_to_service_namespace. The promotion key models explicit collector enrichment of cAdvisor series with service_namespace, service_name, and deployment_environment_name rather than a collector role. Absent/false means the raw cAdvisor label shape remains unchanged. |
 | `environments[].cluster.k8s_monitoring.metrics_replicas` | int |  | MetricsReplicas is the alloy-metrics StatefulSet replica count (does NOT scale with nodes). 0 ⇒ default 1. |
 | `environments[].cluster.k8s_monitoring.receiver_as_daemonset` | bool |  | ReceiverAsDaemonset models alloy-receiver as a per-node DaemonSet instead of the synth default (a single Deployment). |
 | `environments[].cluster.k8s_monitoring.fleet_management` | bool |  | FleetManagement, when true, registers this cluster's Alloy collectors with the FM API (a fleet_management construct instance is emitted from the cluster path). Requires Enabled. |
@@ -672,7 +672,7 @@ app — blueprint-declared service GRAPH; each node emits custom (DSL) metrics/l
 | `services[].context` | string |  | Context / UseCase / Team are the §5 resource-attr canon (optional; AI blueprints only). Empty ⇒ OMITTED (I13). Context ∈ {Platform, ContentGen, DataGen}; Team is set per blueprint (blueprint-only identity). Emitted as bounded metric labels (context/use_case) + resource attrs (context/use_case/team). |
 | `services[].use_case` | string |  |  |
 | `services[].team` | string |  |  |
-| `services[].version` | string |  | Version overrides the default service.version (the released image-tag intent, §5). Empty ⇒ the serviceVersion default. Stamped on service.version (resource attr) + service_version (spanmetrics). |
+| `services[].version` | string |  | Version declares service.version (the released image-tag intent, §5). Empty preserves missing release attribution in resource attrs and spanmetrics. |
 | `services[].routes[]` | string |  | request routes "{METHOD} {path}"; on the entry → drawn per request into r.Route (default "GET /"), on a callee → names its SERVER span (else the node name) |
 | `services[].replicas` | int |  | pods for the node cascade (default 2); per-node scaling §6.6 |
 | `services[].profiles[]` | string |  | catalog profile-template names (resolved at load) |
@@ -747,6 +747,7 @@ app — blueprint-declared service GRAPH; each node emits custom (DSL) metrics/l
 | `traffic.off_peak_rps` | float |  | trough rate (default 5) |
 | `traffic.peak_rps` | float |  | plateau rate (default 50) |
 | `traffic.request_latency_p95_ms` | float |  | RequestLatencyP95Ms is the entry request's base end-to-end latency p95 (lognormal; the per-hop budget + agentflow span windows derive from it). Default 0 ⇒ 200ms (plain HTTP). LLM/agentic apps should set this to seconds (e.g. 9000) so http_server_request_duration + the in-process invoke_workflow/agent/chat span latencies reflect real LLM-wait time, not HTTP speed. |
+| `traces` | bool | yes | Traces controls the request trace lane for applications that have not yet adopted tracing. Nil preserves the historical default (enabled). |
 | `models[]` | object |  | Models is the set of valid (model, provider) routings this app's requests draw from. The minter picks ONE pair per request and stamps it into the correlation, so the gen_ai spans + gateway export logs of every gen_ai-composed node carry the REAL model AND provider (the names-are-law value behind the gen_ai_client / gateway_export_log profiles). Pairing them (vs two independent lists) prevents impossible combinations like a Claude model on the Azure-OpenAI provider. Empty ⇒ a non-AI app. These feed body/attr FIELDS only (never labels), so the per-request draw does not affect the -dump inventory (I32). Values are blueprint-declared (customer model lists stay out of the catalog). |
 | `models[].model` | string |  | gen_ai.request.model (e.g. gpt-4o, claude-3.5-sonnet) |
 | `models[].provider` | string |  | gen_ai.provider.name (e.g. azure-openai, bedrock) |
