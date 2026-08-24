@@ -29,6 +29,9 @@ go build ./cmd/synthkit
 # Dry run: select one bundled blueprint and print its series/label inventory, push nothing
 DRY_RUN=true BLUEPRINT_NAMES=otlp-native ./synthkit -once -dump
 
+# Full DOMM demo estate: realistic L1-L7 telemetry fixtures, still pushes nothing
+DRY_RUN=true BLUEPRINT_NAMES=domm-qualification ./synthkit -once -dump
+
 # Live: create a private env file, fill the required Grafana Cloud values,
 # and explicitly set DRY_RUN=false before starting
 if test -e .env; then
@@ -44,6 +47,10 @@ fi
 # From another terminal; this must print true
 curl -fsS http://localhost:8088/control/status | jq -e '.dry_run == false'
 ```
+
+For a ready-made production-like estate used to validate every DOMM maturity level, see the
+[DOMM qualification demo](./docs/domm-qualification.md). Synthkit supplies only the telemetry;
+DOMM independently supplies and evaluates its Grafana-side evidence.
 
 ## LLM-assisted setup (Claude Code / Codex / OpenCode)
 
