@@ -48,7 +48,7 @@ workloads:
   # telemetry, but has not adopted application metrics, logs, traces, profiles,
   # dashboards, SLOs, alerts, or release attribution.
   - type: app
-    name: domm-reactive-early
+    name: northstar-partner-portal
     runs_on: domm-qualification-prod
     traces: false
     traffic: { shape: diurnal, off_peak_rps: 0.08, peak_rps: 0.8, request_latency_p95_ms: 780 }
@@ -57,7 +57,7 @@ workloads:
         type: web
         runtime: python
         entry: true
-        namespace: domm-reactive-early
+        namespace: northstar-partner-portal
         routes: [GET /v1/status]
 
   # L3 fixture: one real service has metrics, logs, and a meaningful scoped
@@ -65,7 +65,7 @@ workloads:
   # flaps. It has not adopted traces, profiles, dashboards, SLOs, or release
   # attribution.
   - type: app
-    name: domm-proactive-early
+    name: northstar-order-intake
     runs_on: domm-qualification-prod
     traces: false
     traffic: { shape: diurnal, off_peak_rps: 0.12, peak_rps: 1.2, request_latency_p95_ms: 620 }
@@ -74,25 +74,25 @@ workloads:
         type: web
         runtime: go
         entry: true
-        namespace: domm-proactive-early
+        namespace: northstar-order-intake
         routes: [GET /v1/orders]
         metrics:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-early" }
+              service_namespace: { const_str: "northstar-order-intake" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 12.0, mode: throughput_drop } }
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-early" }
+              service_namespace: { const_str: "northstar-order-intake" }
               http_response_status_code: { const_str: "500" }
             value: { shape: { base: 0.4, mode: error_spike } }
         logs:
           - source: application
             stream_labels:
-              service_namespace: { const_str: "domm-proactive-early" }
+              service_namespace: { const_str: "northstar-order-intake" }
               deployment_environment_name: { const_str: "prod" }
             body:
               message: { const_str: "orders request completed" }
@@ -102,7 +102,7 @@ workloads:
   # the L3 fixture, but its meaningful alert follows one stable fire/recovery
   # cycle. It intentionally has no trace backend adoption.
   - type: app
-    name: domm-proactive-base
+    name: northstar-product-catalog
     runs_on: domm-qualification-prod
     traces: false
     traffic: { shape: diurnal, off_peak_rps: 0.16, peak_rps: 1.6, request_latency_p95_ms: 540 }
@@ -111,25 +111,25 @@ workloads:
         type: web
         runtime: go
         entry: true
-        namespace: domm-proactive-base
+        namespace: northstar-product-catalog
         routes: [GET /v1/catalog]
         metrics:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-base" }
+              service_namespace: { const_str: "northstar-product-catalog" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 16.0, mode: throughput_drop } }
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-base" }
+              service_namespace: { const_str: "northstar-product-catalog" }
               http_response_status_code: { const_str: "500" }
             value: { shape: { base: 0.5, mode: error_spike } }
         logs:
           - source: application
             stream_labels:
-              service_namespace: { const_str: "domm-proactive-base" }
+              service_namespace: { const_str: "northstar-product-catalog" }
               deployment_environment_name: { const_str: "prod" }
             body:
               message: { const_str: "catalog request completed" }
@@ -141,7 +141,7 @@ workloads:
   # signal templates, but none has meaningful-alert coverage. Synthkit never
   # emits DOMM facts, scores, or markers.
   - type: app
-    name: domm-reactive-base
+    name: northstar-digital-storefront
     runs_on: domm-qualification-prod
     traffic: { shape: diurnal, off_peak_rps: 0.25, peak_rps: 2.5, request_latency_p95_ms: 420 }
     services:
@@ -149,7 +149,7 @@ workloads:
         type: gateway
         runtime: go
         entry: true
-        namespace: domm-reactive-base
+        namespace: northstar-digital-storefront
         version: "2.4.1"
         routes: [GET /api/catalog, POST /api/checkout]
         profiles: &go_signals [scraped_http_server, runtime_go]
@@ -157,24 +157,24 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-reactive-base" }
+              service_namespace: { const_str: "northstar-digital-storefront" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-reactive-base" }
+              service_namespace: { const_str: "northstar-digital-storefront" }
             value: { normal: { mean: 0.24, stddev: 0.08 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-reactive-base" }
+              service_namespace: { const_str: "northstar-digital-storefront" }
             value: { float_range: { min: 0.22, max: 0.68 } }
         logs: &application_logs
           - source: application
             stream_labels:
-              service_namespace: { const_str: "domm-reactive-base" }
+              service_namespace: { const_str: "northstar-digital-storefront" }
               deployment_environment_name: { const_str: "prod" }
             body:
               message: { const_str: "request completed" }
@@ -183,14 +183,14 @@ workloads:
               trace_id: { ref: trace_id }
               correlation_id: { ref: correlation_id }
         calls: [rx-catalog, rx-checkout]
-      - { name: rx-catalog, type: web, runtime: jvm, namespace: domm-reactive-base, version: "4.8.0", routes: [GET /v1/products], profiles: &jvm_signals [scraped_http_server, runtime_jvm], metrics: *rx_request_metrics, logs: *application_logs, calls: [rx-inventory] }
-      - { name: rx-inventory, type: web, runtime: python, namespace: domm-reactive-base, version: "1.12.3", routes: [GET /v1/stock], profiles: &python_signals [scraped_http_server, runtime_python], metrics: *rx_request_metrics, logs: *application_logs }
-      - { name: rx-checkout, type: web, runtime: node, namespace: domm-reactive-base, version: "3.6.2", routes: [POST /v1/orders], profiles: &node_signals [scraped_http_server, runtime_node], metrics: *rx_request_metrics, logs: *application_logs }
+      - { name: rx-catalog, type: web, runtime: jvm, namespace: northstar-digital-storefront, version: "4.8.0", routes: [GET /v1/products], profiles: &jvm_signals [scraped_http_server, runtime_jvm], metrics: *rx_request_metrics, logs: *application_logs, calls: [rx-inventory] }
+      - { name: rx-inventory, type: web, runtime: python, namespace: northstar-digital-storefront, version: "1.12.3", routes: [GET /v1/stock], profiles: &python_signals [scraped_http_server, runtime_python], metrics: *rx_request_metrics, logs: *application_logs }
+      - { name: rx-checkout, type: web, runtime: node, namespace: northstar-digital-storefront, version: "3.6.2", routes: [POST /v1/orders], profiles: &node_signals [scraped_http_server, runtime_node], metrics: *rx_request_metrics, logs: *application_logs }
 
   # Ten services, of which the Grafana fixture gives exactly five a meaningful
   # alert. This is the strict 50% near-miss fixture.
   - type: app
-    name: domm-proactive-boundary
+    name: northstar-marketplace
     runs_on: domm-qualification-prod
     traffic: { shape: diurnal, off_peak_rps: 0.4, peak_rps: 4.0, request_latency_p95_ms: 510 }
     services:
@@ -198,7 +198,7 @@ workloads:
         type: gateway
         runtime: go
         entry: true
-        namespace: domm-proactive-boundary
+        namespace: northstar-marketplace
         version: "2.4.1"
         routes: [GET /api/catalog, POST /api/checkout]
         profiles: &pb_go_signals [scraped_http_server, runtime_go]
@@ -206,30 +206,30 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-boundary" }
+              service_namespace: { const_str: "northstar-marketplace" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-proactive-boundary" }
+              service_namespace: { const_str: "northstar-marketplace" }
             value: { normal: { mean: 0.31, stddev: 0.11 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-proactive-boundary" }
+              service_namespace: { const_str: "northstar-marketplace" }
             value: { float_range: { min: 0.28, max: 0.74 } }
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-boundary" }
+              service_namespace: { const_str: "northstar-marketplace" }
               http_response_status_code: { const_str: "500" }
             value: { shape: { base: 1.0, mode: error_spike } }
         logs: &pb_application_logs
           - source: application
             stream_labels:
-              service_namespace: { const_str: "domm-proactive-boundary" }
+              service_namespace: { const_str: "northstar-marketplace" }
               deployment_environment_name: { const_str: "prod" }
             body:
               message: { const_str: "request completed" }
@@ -238,14 +238,14 @@ workloads:
               trace_id: { ref: trace_id }
               correlation_id: { ref: correlation_id }
         calls: [pb-catalog, pb-checkout, pb-search]
-      - { name: pb-catalog, type: web, runtime: jvm, namespace: domm-proactive-boundary, version: "4.8.0", routes: [GET /v1/products], profiles: &pb_jvm_signals [scraped_http_server, runtime_jvm], metrics: *pb_alert_metrics, logs: *pb_application_logs, calls: [pb-inventory] }
-      - { name: pb-inventory, type: web, runtime: python, namespace: domm-proactive-boundary, version: "1.12.3", routes: [GET /v1/stock], profiles: &pb_python_signals [scraped_http_server, runtime_python], metrics: *pb_alert_metrics, logs: *pb_application_logs }
-      - { name: pb-checkout, type: web, runtime: node, namespace: domm-proactive-boundary, version: "3.6.2", routes: [POST /v1/orders], profiles: &pb_node_signals [scraped_http_server, runtime_node], metrics: *pb_alert_metrics, logs: *pb_application_logs, calls: [pb-payment, pb-orders] }
-      - { name: pb-payment, type: grpc, runtime: go, namespace: domm-proactive-boundary, version: "5.3.0", routes: [POST /payments.Charge], profiles: *pb_go_signals, metrics: *pb_alert_metrics, logs: *pb_application_logs }
+      - { name: pb-catalog, type: web, runtime: jvm, namespace: northstar-marketplace, version: "4.8.0", routes: [GET /v1/products], profiles: &pb_jvm_signals [scraped_http_server, runtime_jvm], metrics: *pb_alert_metrics, logs: *pb_application_logs, calls: [pb-inventory] }
+      - { name: pb-inventory, type: web, runtime: python, namespace: northstar-marketplace, version: "1.12.3", routes: [GET /v1/stock], profiles: &pb_python_signals [scraped_http_server, runtime_python], metrics: *pb_alert_metrics, logs: *pb_application_logs }
+      - { name: pb-checkout, type: web, runtime: node, namespace: northstar-marketplace, version: "3.6.2", routes: [POST /v1/orders], profiles: &pb_node_signals [scraped_http_server, runtime_node], metrics: *pb_alert_metrics, logs: *pb_application_logs, calls: [pb-payment, pb-orders] }
+      - { name: pb-payment, type: grpc, runtime: go, namespace: northstar-marketplace, version: "5.3.0", routes: [POST /payments.Charge], profiles: *pb_go_signals, metrics: *pb_alert_metrics, logs: *pb_application_logs }
       - name: pb-orders
         type: worker
         runtime: python
-        namespace: domm-proactive-boundary
+        namespace: northstar-marketplace
         version: "2.9.4"
         routes: [CONSUME orders.created]
         profiles: *pb_python_signals
@@ -253,32 +253,32 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-boundary" }
+              service_namespace: { const_str: "northstar-marketplace" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-proactive-boundary" }
+              service_namespace: { const_str: "northstar-marketplace" }
             value: { normal: { mean: 0.31, stddev: 0.11 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-proactive-boundary" }
+              service_namespace: { const_str: "northstar-marketplace" }
             value: { float_range: { min: 0.28, max: 0.74 } }
         logs: *pb_application_logs
         calls: [pb-datastore, pb-notification]
-      - { name: pb-datastore, type: db, runtime: go, namespace: domm-proactive-boundary, version: "15.6", profiles: *pb_go_signals, metrics: *pb_request_metrics, logs: *pb_application_logs }
-      - { name: pb-search, type: web, runtime: jvm, namespace: domm-proactive-boundary, version: "6.1.1", routes: [GET /v1/search], profiles: *pb_jvm_signals, metrics: *pb_request_metrics, logs: *pb_application_logs }
-      - { name: pb-shipping, type: web, runtime: go, namespace: domm-proactive-boundary, version: "1.7.5", routes: [POST /v1/quotes], profiles: *pb_go_signals, metrics: *pb_request_metrics, logs: *pb_application_logs }
-      - { name: pb-notification, type: worker, runtime: node, namespace: domm-proactive-boundary, version: "3.2.8", routes: [CONSUME notification.requested], profiles: *pb_node_signals, metrics: *pb_request_metrics, logs: *pb_application_logs }
+      - { name: pb-datastore, type: db, runtime: go, namespace: northstar-marketplace, version: "15.6", profiles: *pb_go_signals, metrics: *pb_request_metrics, logs: *pb_application_logs }
+      - { name: pb-search, type: web, runtime: jvm, namespace: northstar-marketplace, version: "6.1.1", routes: [GET /v1/search], profiles: *pb_jvm_signals, metrics: *pb_request_metrics, logs: *pb_application_logs }
+      - { name: pb-shipping, type: web, runtime: go, namespace: northstar-marketplace, version: "1.7.5", routes: [POST /v1/quotes], profiles: *pb_go_signals, metrics: *pb_request_metrics, logs: *pb_application_logs }
+      - { name: pb-notification, type: worker, runtime: node, namespace: northstar-marketplace, version: "3.2.8", routes: [CONSUME notification.requested], profiles: *pb_node_signals, metrics: *pb_request_metrics, logs: *pb_application_logs }
 
   # L5 fixture: ten services with six meaningful alerts, rich correlated
   # telemetry, and no curated dashboard. This is the smallest positive
   # Proactive estate under the strict greater-than-half alert rule.
   - type: app
-    name: domm-proactive-late
+    name: northstar-commerce-platform
     runs_on: domm-qualification-prod
     traffic: { shape: diurnal, off_peak_rps: 0.5, peak_rps: 5.0, request_latency_p95_ms: 560 }
     services:
@@ -286,7 +286,7 @@ workloads:
         type: gateway
         runtime: go
         entry: true
-        namespace: domm-proactive-late
+        namespace: northstar-commerce-platform
         version: "2.4.2"
         routes: [GET /api/catalog, POST /api/checkout]
         profiles: &pc_go_signals [scraped_http_server, runtime_go]
@@ -294,30 +294,30 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-late" }
+              service_namespace: { const_str: "northstar-commerce-platform" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-proactive-late" }
+              service_namespace: { const_str: "northstar-commerce-platform" }
             value: { normal: { mean: 0.34, stddev: 0.12 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-proactive-late" }
+              service_namespace: { const_str: "northstar-commerce-platform" }
             value: { float_range: { min: 0.26, max: 0.72 } }
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-late" }
+              service_namespace: { const_str: "northstar-commerce-platform" }
               http_response_status_code: { const_str: "500" }
             value: { shape: { base: 1.0, mode: error_spike } }
         logs: &pc_application_logs
           - source: application
             stream_labels:
-              service_namespace: { const_str: "domm-proactive-late" }
+              service_namespace: { const_str: "northstar-commerce-platform" }
               deployment_environment_name: { const_str: "prod" }
             body:
               message: { const_str: "request completed" }
@@ -326,45 +326,45 @@ workloads:
               trace_id: { ref: trace_id }
               correlation_id: { ref: correlation_id }
         calls: [pc-catalog, pc-checkout, pc-search]
-      - { name: pc-catalog, type: web, runtime: jvm, namespace: domm-proactive-late, version: "4.9.0", routes: [GET /v1/products], profiles: &pc_jvm_signals [scraped_http_server, runtime_jvm], metrics: *pc_alert_metrics, logs: *pc_application_logs, calls: [pc-inventory] }
-      - { name: pc-inventory, type: web, runtime: python, namespace: domm-proactive-late, version: "1.13.0", routes: [GET /v1/stock], profiles: &pc_python_signals [scraped_http_server, runtime_python], metrics: *pc_alert_metrics, logs: *pc_application_logs }
-      - { name: pc-checkout, type: web, runtime: node, namespace: domm-proactive-late, version: "3.7.0", routes: [POST /v1/orders], profiles: &pc_node_signals [scraped_http_server, runtime_node], metrics: *pc_alert_metrics, logs: *pc_application_logs, calls: [pc-payment, pc-orders] }
-      - { name: pc-payment, type: grpc, runtime: go, namespace: domm-proactive-late, version: "5.4.0", routes: [POST /payments.Charge], profiles: *pc_go_signals, metrics: *pc_alert_metrics, logs: *pc_application_logs }
-      - { name: pc-orders, type: worker, runtime: python, namespace: domm-proactive-late, version: "2.10.0", routes: [CONSUME orders.created], profiles: *pc_python_signals, metrics: *pc_alert_metrics, logs: *pc_application_logs, calls: [pc-datastore, pc-notification] }
+      - { name: pc-catalog, type: web, runtime: jvm, namespace: northstar-commerce-platform, version: "4.9.0", routes: [GET /v1/products], profiles: &pc_jvm_signals [scraped_http_server, runtime_jvm], metrics: *pc_alert_metrics, logs: *pc_application_logs, calls: [pc-inventory] }
+      - { name: pc-inventory, type: web, runtime: python, namespace: northstar-commerce-platform, version: "1.13.0", routes: [GET /v1/stock], profiles: &pc_python_signals [scraped_http_server, runtime_python], metrics: *pc_alert_metrics, logs: *pc_application_logs }
+      - { name: pc-checkout, type: web, runtime: node, namespace: northstar-commerce-platform, version: "3.7.0", routes: [POST /v1/orders], profiles: &pc_node_signals [scraped_http_server, runtime_node], metrics: *pc_alert_metrics, logs: *pc_application_logs, calls: [pc-payment, pc-orders] }
+      - { name: pc-payment, type: grpc, runtime: go, namespace: northstar-commerce-platform, version: "5.4.0", routes: [POST /payments.Charge], profiles: *pc_go_signals, metrics: *pc_alert_metrics, logs: *pc_application_logs }
+      - { name: pc-orders, type: worker, runtime: python, namespace: northstar-commerce-platform, version: "2.10.0", routes: [CONSUME orders.created], profiles: *pc_python_signals, metrics: *pc_alert_metrics, logs: *pc_application_logs, calls: [pc-datastore, pc-notification] }
       - name: pc-datastore
         type: db
         runtime: go
-        namespace: domm-proactive-late
+        namespace: northstar-commerce-platform
         version: "15.6"
         profiles: *pc_go_signals
         metrics: &pc_request_metrics
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-proactive-late" }
+              service_namespace: { const_str: "northstar-commerce-platform" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-proactive-late" }
+              service_namespace: { const_str: "northstar-commerce-platform" }
             value: { normal: { mean: 0.34, stddev: 0.12 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-proactive-late" }
+              service_namespace: { const_str: "northstar-commerce-platform" }
             value: { float_range: { min: 0.26, max: 0.72 } }
         logs: *pc_application_logs
-      - { name: pc-search, type: web, runtime: jvm, namespace: domm-proactive-late, version: "6.2.0", routes: [GET /v1/search], profiles: *pc_jvm_signals, metrics: *pc_request_metrics, logs: *pc_application_logs }
-      - { name: pc-shipping, type: web, runtime: go, namespace: domm-proactive-late, version: "1.8.0", routes: [POST /v1/quotes], profiles: *pc_go_signals, metrics: *pc_request_metrics, logs: *pc_application_logs }
-      - { name: pc-notification, type: worker, runtime: node, namespace: domm-proactive-late, version: "3.3.0", routes: [CONSUME notification.requested], profiles: *pc_node_signals, metrics: *pc_request_metrics, logs: *pc_application_logs }
+      - { name: pc-search, type: web, runtime: jvm, namespace: northstar-commerce-platform, version: "6.2.0", routes: [GET /v1/search], profiles: *pc_jvm_signals, metrics: *pc_request_metrics, logs: *pc_application_logs }
+      - { name: pc-shipping, type: web, runtime: go, namespace: northstar-commerce-platform, version: "1.8.0", routes: [POST /v1/quotes], profiles: *pc_go_signals, metrics: *pc_request_metrics, logs: *pc_application_logs }
+      - { name: pc-notification, type: worker, runtime: node, namespace: northstar-commerce-platform, version: "3.3.0", routes: [CONSUME notification.requested], profiles: *pc_node_signals, metrics: *pc_request_metrics, logs: *pc_application_logs }
 
   # Exact L6 fixture. It has strong metrics/logs/traces but deliberately no
   # Pyroscope SDK lane; its L7 operational prerequisites are also omitted by
   # the Grafana fixture.
   - type: app
-    name: domm-systematic-early
+    name: northstar-fulfillment-platform
     runs_on: domm-qualification-prod
     traffic: { shape: diurnal, off_peak_rps: 0.6, peak_rps: 6.0, request_latency_p95_ms: 610 }
     services:
@@ -372,7 +372,7 @@ workloads:
         type: gateway
         runtime: go
         entry: true
-        namespace: domm-systematic-early
+        namespace: northstar-fulfillment-platform
         version: "7.1.0"
         routes: [GET /api/catalog, POST /api/checkout]
         profiles: &se_go_signals [scraped_http_server, runtime_go]
@@ -380,30 +380,30 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
             value: { normal: { mean: 0.37, stddev: 0.13 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
             value: { float_range: { min: 0.24, max: 0.70 } }
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
               http_response_status_code: { const_str: "500" }
             value: { shape: { base: 1.0, mode: error_spike } }
         logs: &se_application_logs
           - source: application
             stream_labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
               deployment_environment_name: { const_str: "prod" }
             body:
               message: { const_str: "request completed" }
@@ -415,7 +415,7 @@ workloads:
       - name: se-catalog
         type: web
         runtime: jvm
-        namespace: domm-systematic-early
+        namespace: northstar-fulfillment-platform
         version: "7.1.0"
         routes: [GET /v1/products]
         profiles: &se_jvm_signals [scraped_http_server, runtime_jvm]
@@ -423,43 +423,43 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
             value: { normal: { mean: 0.37, stddev: 0.13 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
             value: { float_range: { min: 0.24, max: 0.70 } }
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-systematic-early" }
+              service_namespace: { const_str: "northstar-fulfillment-platform" }
               http_response_status_code: { const_str: "500" }
             value: { shape: { base: 1.0, mode: error_spike } }
         logs: *se_application_logs
         calls: [se-inventory]
-      - { name: se-inventory, type: web, runtime: python, namespace: domm-systematic-early, version: "7.1.0", routes: [GET /v1/stock], profiles: &se_python_signals [scraped_http_server, runtime_python], metrics: *se_request_metrics, logs: *se_application_logs }
-      - { name: se-checkout, type: web, runtime: node, namespace: domm-systematic-early, version: "7.0.3", routes: [POST /v1/orders], profiles: &se_node_signals [scraped_http_server, runtime_node], metrics: *se_request_metrics, logs: *se_application_logs, calls: [se-payment, se-orders] }
-      - { name: se-payment, type: grpc, runtime: go, namespace: domm-systematic-early, version: "7.1.0", routes: [POST /payments.Charge], profiles: *se_go_signals, metrics: *se_request_metrics, logs: *se_application_logs }
-      - { name: se-orders, type: worker, runtime: python, namespace: domm-systematic-early, version: "7.1.0", routes: [CONSUME orders.created], profiles: *se_python_signals, metrics: *se_request_metrics, logs: *se_application_logs, calls: [se-datastore] }
-      - { name: se-datastore, type: db, runtime: go, namespace: domm-systematic-early, version: "15.6", profiles: *se_go_signals, metrics: *se_request_metrics, logs: *se_application_logs }
+      - { name: se-inventory, type: web, runtime: python, namespace: northstar-fulfillment-platform, version: "7.1.0", routes: [GET /v1/stock], profiles: &se_python_signals [scraped_http_server, runtime_python], metrics: *se_request_metrics, logs: *se_application_logs }
+      - { name: se-checkout, type: web, runtime: node, namespace: northstar-fulfillment-platform, version: "7.0.3", routes: [POST /v1/orders], profiles: &se_node_signals [scraped_http_server, runtime_node], metrics: *se_request_metrics, logs: *se_application_logs, calls: [se-payment, se-orders] }
+      - { name: se-payment, type: grpc, runtime: go, namespace: northstar-fulfillment-platform, version: "7.1.0", routes: [POST /payments.Charge], profiles: *se_go_signals, metrics: *se_request_metrics, logs: *se_application_logs }
+      - { name: se-orders, type: worker, runtime: python, namespace: northstar-fulfillment-platform, version: "7.1.0", routes: [CONSUME orders.created], profiles: *se_python_signals, metrics: *se_request_metrics, logs: *se_application_logs, calls: [se-datastore] }
+      - { name: se-datastore, type: db, runtime: go, namespace: northstar-fulfillment-platform, version: "15.6", profiles: *se_go_signals, metrics: *se_request_metrics, logs: *se_application_logs }
       # Deliberately mirrors a real production rollout gap: this service emits
       # attributable traces but has not yet adopted service.version. That keeps
       # Systematic.early below the 95% release-attribution L7 boundary without
       # injecting any DOMM-native evidence.
-      - { name: se-search, type: web, runtime: jvm, namespace: domm-systematic-early, routes: [GET /v1/search], profiles: *se_jvm_signals, metrics: *se_request_metrics, logs: *se_application_logs }
+      - { name: se-search, type: web, runtime: jvm, namespace: northstar-fulfillment-platform, routes: [GET /v1/search], profiles: *se_jvm_signals, metrics: *se_request_metrics, logs: *se_application_logs }
 
   # Exact L7 fixture. The same application shape adds real SDK-pushed profiles;
   # the Grafana fixture supplies the independent L7 operational resources.
   - type: app
-    name: domm-systematic-base
+    name: northstar-checkout-platform
     runs_on: domm-qualification-prod
     traffic: { shape: diurnal, off_peak_rps: 0.7, peak_rps: 7.0, request_latency_p95_ms: 650 }
     services:
@@ -467,7 +467,7 @@ workloads:
         type: gateway
         runtime: go
         entry: true
-        namespace: domm-systematic-base
+        namespace: northstar-checkout-platform
         version: "8.0.0"
         routes: [GET /api/catalog, POST /api/checkout]
         profiles: &sb_go_signals [scraped_http_server, runtime_go]
@@ -475,30 +475,30 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
             value: { normal: { mean: 0.39, stddev: 0.14 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
             value: { float_range: { min: 0.20, max: 0.66 } }
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
               http_response_status_code: { const_str: "500" }
             value: { shape: { base: 1.0, mode: error_spike } }
         logs: &sb_application_logs
           - source: application
             stream_labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
               deployment_environment_name: { const_str: "prod" }
             body:
               message: { const_str: "request completed" }
@@ -511,7 +511,7 @@ workloads:
       - name: sb-catalog
         type: web
         runtime: jvm
-        namespace: domm-systematic-base
+        namespace: northstar-checkout-platform
         version: "8.0.0"
         routes: [GET /v1/products]
         profiles: &sb_jvm_signals [scraped_http_server, runtime_jvm]
@@ -519,39 +519,39 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 20.0, mode: throughput_drop } }
           - name: http_server_request_duration_seconds
             instrument: histogram
             buckets: [0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
             labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
             value: { normal: { mean: 0.39, stddev: 0.14 } }
           - name: application_saturation_ratio
             instrument: gauge
             labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
             value: { float_range: { min: 0.20, max: 0.66 } }
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-systematic-base" }
+              service_namespace: { const_str: "northstar-checkout-platform" }
               http_response_status_code: { const_str: "500" }
             value: { shape: { base: 1.0, mode: error_spike } }
         logs: *sb_application_logs
         pyroscope: { enabled: true, runtime: jvm, span_profiles: true }
         calls: [sb-inventory]
-      - { name: sb-inventory, type: web, runtime: python, namespace: domm-systematic-base, version: "8.0.0", routes: [GET /v1/stock], profiles: &sb_python_signals [scraped_http_server, runtime_python], metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: { enabled: true, runtime: python, span_profiles: true } }
-      - { name: sb-checkout, type: web, runtime: node, namespace: domm-systematic-base, version: "8.0.0", routes: [POST /v1/orders], profiles: &sb_node_signals [scraped_http_server, runtime_node], metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: { enabled: true, runtime: node, span_profiles: true }, calls: [sb-payment, sb-orders] }
-      - { name: sb-payment, type: grpc, runtime: go, namespace: domm-systematic-base, version: "8.0.0", routes: [POST /payments.Charge], profiles: *sb_go_signals, metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: *sb_go_pyroscope }
-      - { name: sb-orders, type: worker, runtime: python, namespace: domm-systematic-base, version: "8.0.0", routes: [CONSUME orders.created], profiles: *sb_python_signals, metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: { enabled: true, runtime: python, span_profiles: true }, calls: [sb-datastore] }
-      - { name: sb-datastore, type: db, runtime: go, namespace: domm-systematic-base, version: "15.6", profiles: *sb_go_signals, metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: *sb_go_pyroscope }
-      - { name: sb-search, type: web, runtime: jvm, namespace: domm-systematic-base, version: "8.0.0", routes: [GET /v1/search], profiles: *sb_jvm_signals, metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: { enabled: true, runtime: jvm, span_profiles: true } }
+      - { name: sb-inventory, type: web, runtime: python, namespace: northstar-checkout-platform, version: "8.0.0", routes: [GET /v1/stock], profiles: &sb_python_signals [scraped_http_server, runtime_python], metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: { enabled: true, runtime: python, span_profiles: true } }
+      - { name: sb-checkout, type: web, runtime: node, namespace: northstar-checkout-platform, version: "8.0.0", routes: [POST /v1/orders], profiles: &sb_node_signals [scraped_http_server, runtime_node], metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: { enabled: true, runtime: node, span_profiles: true }, calls: [sb-payment, sb-orders] }
+      - { name: sb-payment, type: grpc, runtime: go, namespace: northstar-checkout-platform, version: "8.0.0", routes: [POST /payments.Charge], profiles: *sb_go_signals, metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: *sb_go_pyroscope }
+      - { name: sb-orders, type: worker, runtime: python, namespace: northstar-checkout-platform, version: "8.0.0", routes: [CONSUME orders.created], profiles: *sb_python_signals, metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: { enabled: true, runtime: python, span_profiles: true }, calls: [sb-datastore] }
+      - { name: sb-datastore, type: db, runtime: go, namespace: northstar-checkout-platform, version: "15.6", profiles: *sb_go_signals, metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: *sb_go_pyroscope }
+      - { name: sb-search, type: web, runtime: jvm, namespace: northstar-checkout-platform, version: "8.0.0", routes: [GET /v1/search], profiles: *sb_jvm_signals, metrics: *sb_request_metrics, logs: *sb_application_logs, pyroscope: { enabled: true, runtime: jvm, span_profiles: true } }
 
   # Non-production traffic is present but outside the qualification registry.
   - type: app
-    name: domm-nonprod-only
+    name: northstar-preview-store
     runs_on: domm-qualification-staging
     traffic: { shape: diurnal, off_peak_rps: 0.1, peak_rps: 0.8, request_latency_p95_ms: 720 }
     services:
@@ -559,7 +559,7 @@ workloads:
         type: gateway
         runtime: go
         entry: true
-        namespace: domm-nonprod-only
+        namespace: northstar-preview-store
         version: "9.0.0-rc1"
         routes: [GET /api/catalog]
         profiles: [scraped_http_server, runtime_go]
@@ -567,13 +567,13 @@ workloads:
           - name: http_server_requests_total
             instrument: counter
             labels:
-              service_namespace: { const_str: "domm-nonprod-only" }
+              service_namespace: { const_str: "northstar-preview-store" }
               http_response_status_code: { const_str: "200" }
             value: { shape: { base: 8.0, mode: throughput_drop } }
         logs: &np_application_logs
           - source: application
             stream_labels:
-              service_namespace: { const_str: "domm-nonprod-only" }
+              service_namespace: { const_str: "northstar-preview-store" }
               deployment_environment_name: { const_str: "staging" }
             body:
               message: { const_str: "request completed" }
@@ -582,7 +582,7 @@ workloads:
               trace_id: { ref: trace_id }
               correlation_id: { ref: correlation_id }
         calls: [np-catalog]
-      - { name: np-catalog, type: web, runtime: python, namespace: domm-nonprod-only, version: "9.0.0-rc1", routes: [GET /v1/products], profiles: [scraped_http_server, runtime_python], metrics: *np_request_metrics, logs: *np_application_logs }
+      - { name: np-catalog, type: web, runtime: python, namespace: northstar-preview-store, version: "9.0.0-rc1", routes: [GET /v1/products], profiles: [scraped_http_server, runtime_python], metrics: *np_request_metrics, logs: *np_application_logs }
 
 scenarios:
   - name: meaningful-alert-cycle

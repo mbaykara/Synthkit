@@ -52,4 +52,8 @@ The long-running service emits continuously until stopped with `docker compose s
 
 Deploy the DOMM engine and its qualification fixtures from the [DOMM repository](https://github.com/grafana-ps/domm). That harness adds the Grafana-side resources that telemetry alone cannot represent, such as meaningful alert rules, curated dashboards, and later-stage operational evidence, and then verifies the independently calculated L1 through L7 results.
 
-The blueprint contains names such as `domm-reactive-early` and `domm-systematic-base` to make the intended test cases readable. Names are selectors only; they do not affect scoring. A level is valid only when DOMM derives it from the emitted signals and the actual Grafana resources.
+The blueprint models one fictional online retailer, Northstar Commerce. Ownership
+scopes such as `northstar-partner-portal` and `northstar-checkout-platform` are
+ordinary business-capability selectors; they do not encode or affect maturity.
+A level is valid only when DOMM derives it from the emitted signals and actual
+Grafana resources.

@@ -41,15 +41,15 @@ func TestBundledDOMMQualificationContract(t *testing.T) {
 	}
 
 	wantWorkloads := []string{
-		"domm-nonprod-only",
-		"domm-proactive-base",
-		"domm-proactive-boundary",
-		"domm-proactive-early",
-		"domm-proactive-late",
-		"domm-reactive-base",
-		"domm-reactive-early",
-		"domm-systematic-base",
-		"domm-systematic-early",
+		"northstar-checkout-platform",
+		"northstar-commerce-platform",
+		"northstar-digital-storefront",
+		"northstar-fulfillment-platform",
+		"northstar-marketplace",
+		"northstar-order-intake",
+		"northstar-partner-portal",
+		"northstar-preview-store",
+		"northstar-product-catalog",
 	}
 	gotWorkloads := make([]string, 0, len(demo.Workloads))
 	for _, workload := range demo.Workloads {
@@ -73,6 +73,22 @@ func TestBundledDOMMQualificationContract(t *testing.T) {
 	for _, forbidden := range []string{"rubric_version", "criterion_key", "maturity_score", "maturity_level", "domm_team_", "domm:"} {
 		if strings.Contains(string(raw), forbidden) {
 			t.Errorf("blueprint contains forbidden scorer-native token %q", forbidden)
+		}
+	}
+
+	for _, maturityScope := range []string{
+		"domm-reactive-early",
+		"domm-reactive-base",
+		"domm-proactive-early",
+		"domm-proactive-base",
+		"domm-proactive-boundary",
+		"domm-proactive-late",
+		"domm-systematic-early",
+		"domm-systematic-base",
+		"domm-nonprod-only",
+	} {
+		if strings.Contains(string(raw), maturityScope) {
+			t.Errorf("blueprint contains maturity-revealing scope %q", maturityScope)
 		}
 	}
 }
