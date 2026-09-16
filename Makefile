@@ -20,6 +20,10 @@ helper-tests:
 deploy-tests:
 	python3 -m unittest scripts/test_synthkit_deploy.py
 
+.PHONY: helm-check
+helm-check: ## validate the Kubernetes chart (requires Helm 3.17+ or Helm 4)
+	python3 -m unittest scripts/test_helm_chart.py
+
 # Coverage profile for Codacy upload. Superset of `test` (same packages, plus
 # instrumentation), so CI runs it in place of the plain `test` leg — no extra full
 # run. Emits coverage.out (gitignored via *.out). atomic mode keeps counts accurate.

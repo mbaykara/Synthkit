@@ -1,0 +1,31 @@
+# Use an image built from a revision containing grafana-cloud-workshop.yaml.
+image:
+  repository: ghcr.io/mbaykara/synthkit
+  digest: ""
+imagePullSecrets: []
+
+# Externally managed, same-namespace Secret; never put credentials in Helm values.
+existingSecret: ""
+# Safe preview default. Delivery-aware readiness remains false in dry-run mode.
+dryRun: true
+# Only 0 (pause) or 1 (emit). Do not install a second emitter for the same estate.
+replicaCount: 1
+
+persistence:
+  existingClaim: ""
+  size: 1Gi
+  # null: cluster default, "": no StorageClass, otherwise explicit class name.
+  storageClass: null
+  accessModes:
+    - ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+nodeSelector: {}
+tolerations: []
+affinity: {}

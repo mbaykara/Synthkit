@@ -1,0 +1,9 @@
+SynthKit is configured for {{ if .Values.dryRun }}DRY RUN (no synthetic ingestion). Delivery readiness will remain false.{{ else }}LIVE ingestion. Readiness waits for successful delivery to every intended sink.{{ end }}
+
+Instructor-only control access (also works while delivery is unready):
+  kubectl -n {{ .Release.Namespace }} port-forward deployment/{{ include "synthkit.fullname" . }} 8088:8088
+  Open http://127.0.0.1:8088/control/ui (username control, password from your external Secret).
+
+The state claim {{ include "synthkit.claimName" . }} is retained on uninstall.
+Historical telemetry is never erased. No cloud fixtures are created or destroyed.
+Run only one emitter for this blueprint's identities in the target stack.

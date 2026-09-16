@@ -18,6 +18,7 @@ import (
 
 	"github.com/rknightion/synthkit/internal/blueprint"
 	"github.com/rknightion/synthkit/internal/bpsource"
+	"github.com/rknightion/synthkit/internal/config"
 	"github.com/rknightion/synthkit/internal/ledger"
 	"github.com/rknightion/synthkit/internal/preflight"
 	"github.com/rknightion/synthkit/internal/runner"
@@ -27,6 +28,29 @@ import (
 type recordingQueueObserver struct {
 	blockedSink string
 	events      []queue.FlushEvent
+}
+
+func TestRequiredProfileConfiguration(t *testing.T) {
+	for _, missing := range []string{"url", "user", "token", "none"} {
+		t.Run(missing, func(t *testing.T) {
+			cfg := &config.Config{ProfilesURL: "https://profiles.example.com", ProfilesUser: "123", Token: "private-test-token"}
+			switch missing {
+			case "url":
+				cfg.ProfilesURL = ""
+			case "user":
+				cfg.ProfilesUser = ""
+			case "token":
+				cfg.Token = ""
+			}
+			err := checkRequiredProfiles(cfg)
+			if (err != nil) != (missing != "none") {
+				t.Fatalf("missing=%s: %v", missing, err)
+			}
+			if err != nil && strings.Contains(err.Error(), "private-test-token") {
+				t.Fatal("profile requirement leaked credentials")
+			}
+		})
+	}
 }
 
 func (o *recordingQueueObserver) EnqueueBlocked(sink string, _ time.Duration) { o.blockedSink = sink }

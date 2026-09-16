@@ -1,0 +1,7 @@
+apiVersion: v2
+name: synthkit
+description: Single-emitter synthetic telemetry for shared Grafana Cloud workshops
+type: application
+version: 0.1.0
+home: https://github.com/mbaykara/Synthkit
+kubeVersion: ">=1.25.0-0"

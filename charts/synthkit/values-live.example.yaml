@@ -1,0 +1,3 @@
+# Supply image.digest separately after building/publishing this revision.
+dryRun: false
+existingSecret: synthkit-runtime

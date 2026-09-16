@@ -66,3 +66,13 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: make e2e
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      # Full URL: third-party action, unlike the mirrored standard setup actions.
+      - uses: https://github.com/Azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v3.17.4
+      - run: make helm-check docs-check

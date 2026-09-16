@@ -1,0 +1,184 @@
+# One shared training estate; all resources below are synthetic identities.
+# No Terraform fixtures, real application deployments, or automatic incidents.
+name: grafana-cloud-workshop
+label: grafana-cloud-workshop
+shape: business_hours_plateau
+timezone: UTC
+series_budget: 12000
+metadata:
+  description: Shared Grafana Cloud training shop with deliberately uneven telemetry adoption.
+  owner: workshop-instructor
+  category: workshop
+  tags: [workshop, training, kubernetes, metrics, logs, traces, profiles]
+
+environments:
+  - name: prod
+    production: true
+    weight: 1.0
+    cloud:
+      provider: aws
+      account_id: "420000000001"
+      region: eu-west-1
+      vpc_id: vpc-workshop-prod
+      cloudwatch:
+        nlb: false
+        ebs: false
+        nat_gateway: false
+        eks: false
+        firehose: false
+        private_link: false
+        albs: 0
+        s3_buckets: 0
+    cluster:
+      type: eks
+      name: workshop-prod
+      node_groups: [{name: applications, instance_type: m6i.large, desired: 2}]
+      observability: {cloudwatch: false}
+      k8s_monitoring:
+        enabled: true
+        alloy: true
+        # Do not silently fill adoption gaps with pod logs or eBPF profiles.
+        features:
+          cluster_metrics: true
+          cluster_events: false
+          pod_logs: false
+          node_logs: false
+          profiling: false
+          application_observability: false
+
+workloads:
+  - type: app
+    name: workshop-inventory
+    runs_on: workshop-prod
+    traces: false
+    traffic: {off_peak_rps: 1, peak_rps: 1}
+    services:
+      - name: shop-inventory
+        type: web
+        runtime: go
+        entry: true
+        namespace: workshop-shop
+        replicas: 1
+        routes: [GET /inventory]
+        # Catalog templates supply metrics, not continuous profiling.
+        profiles: [runtime_go]
+        metrics:
+          # Source: signals/beyla.md [slug: beyla-red-application]. This is
+          # an SDK-shaped application histogram, not a Beyla collector claim.
+          # DSL observations are not the request ledger: use for latency, not RPS.
+          - name: http_server_request_duration_seconds
+            instrument: histogram
+            unit: seconds
+            labels:
+              http_request_method: {const_str: GET}
+            value: {shape: {base: 0.12, mode: latency_storm}}
+            buckets: [0, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]
+            le_style: dotzero
+
+  - type: app
+    name: workshop-shipping
+    runs_on: workshop-prod
+    traces: false
+    traffic: {off_peak_rps: 1, peak_rps: 1}
+    services:
+      - name: shop-shipping
+        type: web
+        runtime: go
+        entry: true
+        namespace: workshop-shop
+        replicas: 1
+        routes: [GET /shipping]
+        profiles: [runtime_go]
+        metrics:
+          - name: http_server_request_duration_seconds
+            instrument: histogram
+            unit: seconds
+            labels:
+              http_request_method: {const_str: GET}
+            value: {shape: {base: 0.12, mode: latency_storm}}
+            buckets: [0, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]
+            le_style: dotzero
+        logs:
+          - source: app
+            body:
+              msg: {const_str: shipping request completed}
+              route: {ref: route}
+              status: {ref: status}
+              outcome: {ref: outcome}
+
+  - type: app
+    name: workshop-shop
+    runs_on: workshop-prod
+    traces: true
+    # Equal bounds keep request/log/trace traffic nonzero at night and weekends.
+    # Infra, DSL shape values and CPU profiles retain their natural load curve.
+    traffic: {off_peak_rps: 2, peak_rps: 2, request_latency_p95_ms: 300}
+    services:
+      - name: shop-storefront
+        type: web
+        runtime: go
+        entry: true
+        namespace: workshop-shop
+        version: "1.0.0"
+        replicas: 1
+        routes: [GET /checkout]
+        calls: [shop-checkout]
+        profiles: [runtime_go]
+        metrics: &http_metrics
+          - name: http_server_request_duration_seconds
+            instrument: histogram
+            unit: seconds
+            labels:
+              http_request_method: {const_str: GET}
+            value: {shape: {base: 0.12, mode: latency_storm}}
+            buckets: [0, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10]
+            le_style: dotzero
+        logs: &correlated_logs
+          - source: app
+            body:
+              msg: {const_str: shop request completed}
+              route: {ref: route}
+              status: {ref: status}
+              outcome: {ref: outcome}
+              # High-cardinality refs become Loki structured metadata, not labels.
+              trace_id: {ref: trace_id}
+              span_id: {ref: span_id}
+        pyroscope: &cpu_profiles
+          enabled: true
+          mode: sdk
+          runtime: go
+          types: [process_cpu]
+          span_profiles: true
+      - name: shop-checkout
+        type: web
+        runtime: go
+        namespace: workshop-shop
+        version: "1.0.0"
+        replicas: 1
+        routes: [GET /checkout]
+        calls: [shop-payment]
+        profiles: [runtime_go]
+        metrics: *http_metrics
+        logs: *correlated_logs
+        pyroscope: *cpu_profiles
+      - name: shop-payment
+        type: web
+        runtime: go
+        namespace: workshop-shop
+        version: "1.0.0"
+        replicas: 1
+        routes: [GET /payment]
+        profiles: [runtime_go]
+        metrics: *http_metrics
+        logs: *correlated_logs
+        pyroscope: *cpu_profiles
+
+# Definition only: the instructor activates and deactivates this via the control UI.
+scenarios:
+  - name: checkout-regression
+    title: Checkout regression
+    summary: Slow checkout, more failed requests, and a checkout CPU hotspot.
+    effects:
+      - {mode: latency_storm, target: shop-checkout, intensity: 1}
+      - {mode: error_spike, target: shop-checkout, intensity: 1}
+      - {mode: cpu_hotspot, target: shop-checkout, intensity: 1}

@@ -89,9 +89,13 @@ func main() {
 	inventoryJSON := flag.Bool("inventory-json", false, "with -once in dry-run mode: write the canonical telemetry inventory as JSON")
 	preflightCheck := flag.Bool("preflight", false, "validate and probe mandatory live Grafana endpoints, then exit")
 	healthcheck := flag.Bool("healthcheck", false, "exit successfully only when the local control plane is delivery-ready")
+	requireProfiles := flag.Bool("healthcheck-require-profiles", false, "with -healthcheck: also require synthetic profile sink credentials")
 	showVersion := flag.Bool("version", false, "print the release version and source revision as JSON, then exit")
 	envPath := flag.String("env", ".env", "path to .env file (optional)")
 	flag.Parse()
+	if *requireProfiles && !*healthcheck {
+		log.Fatal("synthkit: -healthcheck-require-profiles requires -healthcheck")
+	}
 	if *showVersion {
 		if err := json.NewEncoder(os.Stdout).Encode(struct {
 			Version  string `json:"version"`
@@ -102,6 +106,15 @@ func main() {
 		return
 	}
 	if *healthcheck {
+		if *requireProfiles {
+			cfg, err := config.Load(*envPath)
+			if err != nil {
+				log.Fatal("synthkit healthcheck: cannot load configuration")
+			}
+			if err := checkRequiredProfiles(cfg); err != nil {
+				log.Fatalf("synthkit healthcheck: %v", err)
+			}
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		endpoint, err := readinessEndpoint(os.Getenv("JSON_HTTP_ADDR"))
@@ -141,6 +154,15 @@ func readinessEndpoint(bindAddr string) (string, error) {
 		host = "127.0.0.1"
 	}
 	return "http://" + net.JoinHostPort(host, port) + "/control/readiness", nil
+}
+
+// Optional sinks remain optional for ordinary deployments. A deployment that needs
+// profiles can fail closed before asking the server about the wired delivery lanes.
+func checkRequiredProfiles(cfg *config.Config) error {
+	if !cfg.SynthProfilesEnabled() {
+		return fmt.Errorf("synthetic profiles require nonempty GC_PROFILES_URL, GC_PROFILES_USER, and GC_TOKEN")
+	}
+	return nil
 }
 
 func checkReadiness(ctx context.Context, client *http.Client, endpoint string) error {

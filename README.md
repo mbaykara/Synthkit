@@ -52,6 +52,11 @@ For a ready-made production-like estate used to validate every DOMM maturity lev
 [DOMM qualification demo](./docs/domm-qualification.md). Synthkit supplies only the telemetry;
 DOMM independently supplies and evaluates its Grafana-side evidence.
 
+For a continuously running, shared training stack, use the [Kubernetes Helm deployment](./docs/kubernetes.md)
+and [90-minute Grafana Cloud workshop](./docs/workshop.md). The `grafana-cloud-workshop` blueprint
+models uneven telemetry adoption without creating Grafana test fixtures. Restarting the generator
+does not require deleting previously ingested telemetry.
+
 ## LLM-assisted setup (Claude Code / Codex / OpenCode)
 
 synthkit ships agent skills for deployment and operation. In **Claude Code**, open this repo and run

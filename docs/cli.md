@@ -23,6 +23,7 @@ loads the complete catalog.
 | `-dump` | false | With `-once`: print the full series/label inventory to stdout (diff against `signals/`). |
 | `-preflight` | false | Validate and probe mandatory live Grafana endpoints, then exit with redacted lane/reason output. |
 | `-healthcheck` | false | Exit successfully only when the local control plane reports delivery readiness; used by Compose. |
+| `-healthcheck-require-profiles` | false | With `-healthcheck`: also fail if synthetic profile credentials are missing or empty; used by the workshop Helm chart. Ordinary deployments keep profiling optional. |
 | `-version` | false | Print `{"version":"X.Y.Z","revision":"<40-hex>"}` as JSON, then exit. Local builds report `dev`/`unknown` unless stamped. |
 | `-env <path>` | `.env` | Path to the `.env` file (optional; falls back to process environment). |
 
