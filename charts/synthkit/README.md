@@ -5,6 +5,10 @@ does not install Grafana, provision cloud fixtures, run DOMM Terraform, or erase
 Build the image from this revision or newer: older images do not contain the workshop blueprint.
 Use the [Kubernetes deployment guide](../../docs/kubernetes.md) for image publication, private
 credential preparation, rollout troubleshooting, and the full operating procedure.
+For concrete workshop, instrumentation-gap, profiling and DOMM exercises, see
+[practical use-case examples](../../docs/blueprint-examples.md#practical-use-cases).
+This chart currently fixes the workshop blueprint; it does not yet support selecting the
+other examples through Helm values.
 
 ## Install
 

@@ -5,9 +5,144 @@ description: A tour of every bundled blueprint — what each models, which const
 
 # Blueprint Examples
 
-Synthkit ships 25 ready-to-run blueprints in the `blueprints/` directory. Each is independent: loading or deleting any one file affects only its own telemetry. They are loaded automatically at startup from the `BLUEPRINTS` directory (default `./blueprints`; see [Configuration](configuration.md)).
+Synthkit ships ready-to-run blueprints in `blueprints/`. At startup it loads only the exact
+runtime names selected by `BLUEPRINT_NAMES`; an empty selection emits no synthetic telemetry.
+The `*` selector explicitly opts into the complete catalog and is not needed for these examples.
 
-To start from an example, copy the file you want into your `BLUEPRINT_DATA_DIR` (or upload it via the control plane), change the name and any identifiers, then restart. The new blueprint is fully independent.
+To author a variation, change the blueprint name and conflicting resource identities, validate
+the YAML, then stage it through the [custom blueprint workflow](custom-blueprints.md). Select
+the returned namespaced runtime identity before restarting. Uploading alone does not enable it.
+
+## Practical use cases
+
+A **blueprint** is the use-case configuration. A **scenario** is an incident definition inside
+that blueprint which the instructor activates and deactivates. The YAML `profiles:` list means
+reusable telemetry templates; actual continuous profiling uses the separate `pyroscope:` block.
+
+| Use case | Select this blueprint | Exercise |
+|---|---|---|
+| General Grafana Cloud workshop | `grafana-cloud-workshop` | Follow a checkout request across metrics, logs, traces and CPU profiles |
+| Instrumentation-gap training | `grafana-cloud-workshop` | Compare fully instrumented checkout with metrics-only inventory and metrics/logs shipping |
+| Profiling specialist training | `profiling-demo` | Compare SDK-push, eBPF and Java-collected profiling shapes |
+| DOMM qualification | `domm-qualification` | Generate uneven adoption and failures; let DOMM independently evaluate the evidence |
+
+Run the commands below from the repository root. Stop the previous emitter before switching
+use cases; do not create duplicate emitters for the same identities. Keep credentials in the
+private `.env`, never in these commands. Live use requires the metrics/logs/traces credentials
+and, for the profiling exercises, the synthetic `GC_PROFILES_*` settings described in
+[Credentials](credentials.md). Do not overwrite an existing `.env`.
+
+### 1. Workshop: investigate a slow checkout
+
+Preview without sending telemetry:
+
+```bash
+DRY_RUN=true BLUEPRINT_NAMES=grafana-cloud-workshop \
+  go run ./cmd/synthkit -once -dump
+```
+
+Once credentials are configured, start continuous generation:
+
+```bash
+DRY_RUN=false BLUEPRINT_NAMES=grafana-cloud-workshop go run ./cmd/synthkit
+```
+
+Allow at least five minutes of baseline data. In the instructor control UI, activate
+`grafana-cloud-workshop/checkout-regression`. Compare checkout latency, error logs, request
+spans and CPU profiles before/during the incident. Deactivate it after eight minutes, then
+verify recovery using recent data. Activation does not auto-expire or create a Grafana incident.
+The complete queries and timing are in the [90-minute workshop](workshop.md).
+
+### 2. Training: distinguish missing instrumentation from an outage
+
+Use the same running workshop, with no incident active. Have participants compare:
+
+- `shop-checkout`: metrics, application logs, traces and CPU profiles.
+- `shop-inventory`: application metrics only.
+- `shop-shipping`: application metrics and logs, but no traces or profiles.
+
+Ask: "Can you identify a failing request from metrics alone? Does a missing trace prove Tempo
+is broken? What would you instrument next?" Expected result: the empty inventory log query and
+empty shipping trace query are intentional adoption gaps, while checkout proves those sinks
+are receiving data. Kubernetes infrastructure events are separate from application logs.
+
+### 3. Specialist training: CPU and memory profiling
+
+Stop the previous local process with Ctrl-C, then preview and run this separate estate:
+
+```bash
+DRY_RUN=true BLUEPRINT_NAMES=profiling-demo go run ./cmd/synthkit -once -dump
+# After checking the preview and configuring the profile credentials:
+DRY_RUN=false BLUEPRINT_NAMES=profiling-demo go run ./cmd/synthkit
+```
+
+Compare `profiling-api` (Go SDK-push) with the cluster-collected profiles in Pyroscope. In
+the control UI, use the loaded schema's failure controls to enable `cpu_hotspot` on
+`profiling-api`, record the interval, then disable it. Repeat separately with `memory_leak`.
+Compare CPU and memory profile types rather than treating them as the same measurement.
+Go span-profile correlation applies to CPU only. This blueprint has a business-hours traffic
+curve, unlike the workshop's equal request-rate bounds; verify activity before class.
+
+### 4. DOMM: alert fire and recovery evidence
+
+```bash
+DRY_RUN=true BLUEPRINT_NAMES=domm-qualification go run ./cmd/synthkit -once -dump
+# After checking the preview and configuring credentials:
+DRY_RUN=false BLUEPRINT_NAMES=domm-qualification go run ./cmd/synthkit
+```
+
+On a dedicated qualification stack, activate
+`domm-qualification/meaningful-alert-cycle`, observe the generated failure signals, then
+deactivate it and observe recovery. A second exercise uses
+`domm-qualification/proactive-early-alert-flap`: activate and deactivate it at instructor-recorded
+times to examine alert sensitivity and noise. The scenario name does not schedule automatic
+flapping. Alert evaluation depends on the independently installed rules and their evaluation
+windows; synthetic errors alone do not prove an alert fired.
+
+Synthkit does not create DOMM scores, dashboards, alert rules, SLOs, teams or qualification
+fixtures. Use the separate DOMM harness when those are required, as described in the
+[DOMM qualification guide](domm-qualification.md). Do not run fixture teardown as part of
+ordinary telemetry-generator startup or shutdown.
+
+### Instructor API: activate and recover repeatably
+
+For an authenticated local instance, the same workshop scenario can be controlled from another
+terminal. On Kubernetes, first use the instructor port-forward from the deployment guide.
+Curl prompts for the control password, keeping it out of the command line:
+
+```bash
+curl --fail --silent --show-error --user control \
+  -H 'Content-Type: application/json' \
+  -d '{"scenario":"grafana-cloud-workshop/checkout-regression"}' \
+  http://127.0.0.1:8088/control/scenarios/activate
+
+# End the exercise, including when the investigation finishes early:
+curl --fail --silent --show-error --user control \
+  -H 'Content-Type: application/json' \
+  -d '{"scenario":"grafana-cloud-workshop/checkout-regression"}' \
+  http://127.0.0.1:8088/control/scenarios/deactivate
+```
+
+For DOMM, replace the qualified scenario name with one of the DOMM names above and ensure that
+blueprint is loaded. Do not change the route to an invented scenario name. Review
+`/control/schema` or the UI for the actual available scenarios and failure targets.
+
+Control changes persist across restart. Deactivate scenarios and disable ad-hoc failures before
+the next class, or explicitly reset the dedicated instance's controls. Retain historical
+telemetry and use fresh time windows; stopping generation does not erase past data.
+
+### Kubernetes support today
+
+The current [Helm chart](../charts/synthkit/README.md) selects `grafana-cloud-workshop` internally.
+The workshop and instrumentation-gap exercises above work with that chart as shipped.
+There is **no Helm value for blueprint selection yet**: setting `blueprintNames`, `profile`
+or `extraEnv` is not supported. Use the local commands above for `profiling-demo` or DOMM until
+chart selection is implemented. Uploading a custom blueprint also requires changing the startup
+selection and restarting; the current chart does not expose that configuration.
+
+Image publication remains a separate prerequisite. Follow the
+[Kubernetes deployment guide](kubernetes.md) and pin an actually published digest, not a local
+validation image or an assumed registry tag.
 
 ---
 
