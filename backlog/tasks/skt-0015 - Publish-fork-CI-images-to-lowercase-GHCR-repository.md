@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-09-20 22:44'
-updated_date: '2026-09-20 22:56'
+updated_date: '2026-09-20 22:59'
 labels: []
 dependencies: []
 type: bug
@@ -46,4 +46,6 @@ Hosted Trivy scans block the existing dependencies: update grpc to 1.83.2 and x/
 Three regression tests failed before the fix and pass afterward; wired into make deploy-tests. actionlint v1.7.12, full make gate, docs-check and git diff --check pass. Read-only review found no blockers. Fork uses maintained reusable db2707e with image-name synthkit and no security bypasses. Upstream release trust unchanged. Await hosted build and digest verification.
 
 Run 35542890980 built both platforms but failed prepublish Trivy: CVE-2026-84445 and CVE-2026-84304 in grpc 1.82.1, CVE-2026-56854 in x/crypto 0.54.0. GitHub advisories confirm grpc 1.83.2 fixes both; scanner identifies x/crypto 0.55.0. No image pushed and no security bypass applied.
+
+PAUSED at user request. Code fixes committed and pushed: 08d3740 (fork lowercase publisher, offline regression tests and docs), b3762b7488140cb9ad03de29fb9001c65d0bb8a2 (grpc 1.83.2, x/crypto 0.55.0 and required x/net/x/text updates). Full make gate docs-check, actionlint v1.7.12, go mod verify, git diff --check and offline grafana-cloud-workshop dry run passed. Latest publish run 35543218796 remains in_progress at pause: https://github.com/mbaykara/Synthkit/actions/runs/35543218796 . Leave external CI running; no local build process remains. Worktree was clean before this handoff. Next: gh run view 35543218796 --repo mbaykara/Synthkit --json status,conclusion,jobs . If failed inspect logs and Trivy findings; do not disable security gates. If successful inspect ghcr.io/mbaykara/synthkit:main, verify AMD64/ARM64 index digest and source labels, optionally offline-run workshop from exact digest, then record digest and finish task/handoff docs. No successful image publication claimed yet. Preserve upstream release signer/verifier; fork only supports main edge builds. Reusable checks out mutable branch ref: avoid source pushes while it builds. No Kubernetes deployment authorized or performed. Test cache moved to /private/tmp/synthkit-publish-ci-test-pycache; offline smoke log /private/tmp/synthkit-ci-deps-dryrun.log. No credentials printed or stored. Repository uses Backlog as sole handoff tracker, not parallel .planning files.
 <!-- SECTION:NOTES:END -->
