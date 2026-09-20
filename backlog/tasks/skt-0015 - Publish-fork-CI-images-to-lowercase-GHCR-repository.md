@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-09-20 22:44'
-updated_date: '2026-09-20 22:50'
+updated_date: '2026-09-20 22:56'
 labels: []
 dependencies: []
 type: bug
@@ -36,10 +36,14 @@ The inherited publisher uses mixed-case github.repository for registry output/ca
 
 <!-- SECTION:PLAN:BEGIN -->
 Add a fork edge job using the immutable maintained reusable workflow with image-name support; preserve the upstream job and reject unsupported fork releases; validate static contracts and hosted publish, then record the digest and update deployment guidance.
+
+Hosted Trivy scans block the existing dependencies: update grpc to 1.83.2 and x/crypto to 0.55.0 (with required x/net 0.58.0 and x/text 0.41.0), rerun the gate, then retry publication without suppressions.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
 Three regression tests failed before the fix and pass afterward; wired into make deploy-tests. actionlint v1.7.12, full make gate, docs-check and git diff --check pass. Read-only review found no blockers. Fork uses maintained reusable db2707e with image-name synthkit and no security bypasses. Upstream release trust unchanged. Await hosted build and digest verification.
+
+Run 35542890980 built both platforms but failed prepublish Trivy: CVE-2026-84445 and CVE-2026-84304 in grpc 1.82.1, CVE-2026-56854 in x/crypto 0.54.0. GitHub advisories confirm grpc 1.83.2 fixes both; scanner identifies x/crypto 0.55.0. No image pushed and no security bypass applied.
 <!-- SECTION:NOTES:END -->
