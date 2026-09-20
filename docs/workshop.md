@@ -1,263 +1,363 @@
 ---
 title: Grafana Cloud Workshop
-description: A 90-minute shared-stack introduction to metrics, logs, traces, profiles, and investigating an incident.
+description: Grafana Cloud Foundation in Action – drei Labs auf einem gemeinsamen Stack in 90 Minuten.
 ---
 
-# Grafana Cloud workshop: one stack, 90 minutes
+# Grafana Cloud Foundation in Action
 
-One instructor runs Synthkit on Kubernetes; everyone explores the **same Grafana Cloud stack**.
-Learners need a browser and their own Grafana login, not Kubernetes access, ingest tokens, or the
-Synthkit control password. This is a synthetic shop, not a deployed shop application: clicking a
-website does not generate requests. Synthkit continuously generates the teaching data.
+**Ein gemeinsamer Stack, 90 Minuten, drei Labs:** ein Signal finden, eine Frage anhand von
+zwei Signaltypen prüfen und den nützlichen Ablauf als persönlichen Quickstart wiederverwenden.
+Die Labs gehören zu den Deck-Folien **9, 14 und 27**. Die Zeitaufteilung unten ist ein
+Moderationsvorschlag; die Foliennummern stammen aus den Lab-Karten.
 
-By the end, learners can choose an appropriate signal, scope a query, follow a request across
-services, read a CPU profile, and distinguish missing instrumentation from broken ingestion.
-No DOMM installation, qualification fixtures, Terraform, dashboards, alerts, users, teams, or
-incident-management resources are created by this blueprint.
+Die Kursleitung betreibt Synthkit auf Kubernetes. Alle Teilnehmenden verwenden denselben
+Grafana-Cloud-Stack mit eigenem Grafana-Login und Browser. Kubernetes-Zugang, Ingest-Token und
+Synthkit-Control-Passwort bleiben bei der Kursleitung. Der Shop ist simuliert: Es gibt keine
+Shop-Webseite, deren Aufruf Requests erzeugt. Synthkit liefert die Telemetrie kontinuierlich.
 
-## Instructor preparation (before the 90 minutes)
+## Das nehmen Sie mit
 
-1. Follow [Kubernetes deployment](kubernetes.md) with the `grafana-cloud-workshop` blueprint and
-   all four ingest lanes configured. Start at least 15 minutes early so rate and comparison
-   windows contain data. Check fresh metrics, logs, traces, and profiles in Grafana, not just a
-   green Pod. Run the queries below yourself.
-2. Give learners permission to query the four data sources and use Explore. Test the exact
-   participant role beforehand; a dashboard-only account may lack the required access. Share
-   the stack URL and the exact Prometheus, Loki, Tempo, and Pyroscope data source names. No
-   participant needs a write token or permission to change data sources.
-3. Keep the instructor-only [operator UI](control-plane.md) available over port-forward. Reset
-   control state before the session, confirm only this blueprint is enabled, the volume
-   multiplier is `1`, and no scenarios or ad-hoc failures are active. Historical telemetry stays.
-4. Use one instructor for mutations. Learners work in Explore or personal scratch dashboards;
-   do not overwrite shared dashboards or alter the data sources during class.
-5. Rehearse the incident and recovery. Record a healthy absolute time interval and a degraded
-   interval, so a transient ingest outage does not prevent discussing previously captured data.
+- Den Service, das Dashboard und den Zeitraum finden, die zählen.
+- Eine Frage über Metriken und einen zweiten Signaltyp untersuchen; Traces und Profiles gezielt einordnen.
+- Abfragen und Erkenntnisse validieren, bevor Sie handeln.
+- Was funktioniert wiederverwenden: zunächst als persönlichen Assistant-Prompt, später mit geprüften Team-Vorgaben.
 
-### Optional click-through setup
+## Kursleitung: Vorbereitung vor den 90 Minuten
 
-Shared IDs make correlation possible; they do **not** configure Grafana links automatically.
-An administrator should set these up and test them before class, or use the manual fallback:
+Das Blueprint `grafana-cloud-workshop` liefert die Daten. Helm erstellt **keine** Grafana-Dashboards,
+Explore-Links, Assistant-Quickstarts, Benutzer, Teams, Alarmregeln oder DOMM-Fixtures und aktiviert
+Assistant nicht. Die folgenden Stack-Artefakte müssen vor der Session vorbereitet und geprüft sein.
 
-- Loki to Tempo: a derived field of type **Label** matching `^trace_id$`, with an internal link
-  to the workshop Tempo data source and query `${__value.raw}`. Here `trace_id` is structured
-  metadata, not part of the JSON body or an indexed stream label.
-- Tempo to Loki: map `service.name` to `service_name` and `service.namespace` to `namespace`.
-  For a custom query, use `{${__tags}} | trace_id="${__trace.traceId}"` and allow a small time
-  margin around the trace. Do not require matching `span_id`: these application logs carry the
-  request's root span ID, not necessarily the selected downstream span's ID.
-- Tempo to Pyroscope: select the workshop Pyroscope data source, map `service.name` to
-  `service_name` and `service.namespace` to `service_namespace`, and select CPU profiles.
-  Test an actual Go server span; Go span profiles are CPU-only.
+1. [Kubernetes-Deployment](kubernetes.md) mit allen vier Ingest-Signalen starten. Mindestens
+   **30 Minuten Vorlauf** einplanen, bei der ersten Einrichtung länger. Die Abfragen weiter unten
+   selbst ausführen und frische Daten in Metriken, Logs, Traces und Profiles prüfen; ein grüner Pod
+   reicht nicht. Für den optionalen Vergleich mit gestern muss auch das gestrige Fenster Daten enthalten.
+2. Mit der tatsächlichen Teilnehmerrolle Dashboard, Explore und alle vier Datenquellen testen.
+   Assistant-Zugang und das Anlegen eines persönlichen Quickstarts separat prüfen. Falls nicht
+   verfügbar, den Karten-Fallback für Lab 3 ankündigen; er ersetzt nicht den Nachweis eines gespeicherten Prompts.
+3. Über den nur für die Kursleitung erreichbaren [Control-Plane-Zugang](control-plane.md) den
+   [Übungszustand zurücksetzen](kubernetes.md#reset-the-exercise-not-the-telemetry): nur Workshop-Blueprint,
+   Volumenmultiplikator `1`, keine aktiven Szenarien oder Ad-hoc-Fehler. Historische Telemetrie bleibt erhalten.
+4. Ein Szenario-Dashboard anlegen, beispielsweise **Foundation – Checkout beobachten**. Mindestens
+   ein Zeitreihen-Panel mit der Metrikabfrage aus Lab 2, Einheit Sekunden, Service `shop-checkout`.
+   Das Panel als „Checkout: mittlere modellierte HTTP-Dauer“ benennen und als Einstieg hervorheben.
+   Das Signal zeigen, aber keine Ursache vorwegnehmen. Ein vorhandenes Dashboard ist ebenfalls
+   geeignet, wenn es exakt diese synthetischen Daten abfragt. Kein Dashboard-JSON wird hier mitgeliefert.
+5. Gesunden Verlauf sammeln, dann `grafana-cloud-workshop/checkout-regression` in der
+   Scenarios-Ansicht aktivieren. Aktivierungszeit notieren, etwa **acht Minuten** laufen lassen,
+   anschließend ausdrücklich deaktivieren. Das Szenario läuft nicht automatisch ab. Es kombiniert
+   Checkout-Latenz, Fehler und CPU-Hotspot; es verändert synthetische Daten, nicht echte Shop-Systeme
+   oder die CPU-Auslastung des Kubernetes-Hosts, und erzeugt kein Grafana-Incident-Objekt.
+6. Nach Ingest-Verzögerung die Veränderung tatsächlich prüfen. Ein **absolutes Fenster mit Datum
+   und Zeitzone** wählen, das gesunden Verlauf und Veränderung enthält. Beispiel für den Ablauf:
+   zehn Minuten gesund, acht Minuten Szenario, anschließend mindestens fünf Minuten Erholung.
+   Der fünfminütige `rate()`-Bereich glättet Übergänge. Das Fenster in Dashboard und Explore speichern
+   bzw. teilen; vor Lab 1 muss das Signal bereits sichtbar sein. Nicht erst während Lab 2 aktivieren.
+7. Dashboard-Link und zwei vorbereitete Explore-Links aus der Grafana-Oberfläche kopieren:
+   Metriken sowie Logs (oder Traces), jeweils derselbe Service und absolute Zeitraum. Mit einem
+   Teilnehmerkonto öffnen und prüfen, dass Datenquelle, Filter und Zeitfenster erhalten bleiben.
+   Keine erfundenen Data-Source-UIDs oder Beispiel-URLs an Teilnehmende verteilen.
 
-These are instructor configuration tasks, not Helm side effects. Provisioned Cloud data sources
-may be read-only; use the supported clone/provisioning workflow rather than changing production
-configuration. See Grafana's [trace/log correlation instructions](https://grafana.com/docs/grafana/latest/datasources/tempo/configure-tempo-data-source/configure-trace-to-logs/)
-and [trace/profile configuration](https://grafana.com/docs/grafana/latest/datasources/tempo/configure-tempo-data-source/configure-trace-to-profiles/).
+### Ausgefüllten Session-Zettel verteilen
 
-## Teaching estate
+Die Kursleitung ersetzt die offenen Felder vor Beginn. `workshop-shop` ist der **synthetische**
+Service-Namespace, nicht der Namespace des tatsächlichen Synthkit-Pods.
 
-The blueprint is `grafana-cloud-workshop`, the synthetic cluster is `workshop-prod`, and the
-application namespace is `workshop-shop`. These labels describe simulated infrastructure; they
-are not the namespace of the real Synthkit Pod.
+| Feld auf der Lab-Karte | Wert für diese Session |
+|---|---|
+| `{service}` | `shop-checkout` |
+| `{namespace}` | `workshop-shop` |
+| `{window}` | Tatsächlich geprüfte Start- und Endzeit mit Datum und Zeitzone eintragen |
+| `{dashboard}` | Link zum geprüften Checkout-Dashboard eintragen |
+| Datenquellen | Tatsächliche Namen von Prometheus, Loki, Tempo und Pyroscope eintragen |
+| Explore-Fallback | Geprüfte Metrik- und Log-/Trace-Links für dasselbe Fenster eintragen |
+| Assistant | Verfügbar und persönliche Quickstarts getestet, oder Karten-Fallback |
 
-| Service | Metrics | Application logs | Traces | Profiles |
-|---|---|---|---|---|
-| `shop-storefront` | Yes | Yes | Yes | Yes |
-| `shop-checkout` | Yes | Yes | Yes | Yes |
-| `shop-payment` | Yes | Yes | Yes | Yes |
-| `shop-inventory` | Yes | No | No | No |
-| `shop-shipping` | Yes | Yes | No | No |
+**Startkontrolle:** Ohne sichtbares Signal und geprüfte Dashboard-/Explore-Links ist Lab 1/2
+nicht bereit. Bei einer Ingest-Störung ein vorher geprüftes, noch gespeichertes Fenster verwenden
+und dessen Datum offen nennen. Nur eine Person verändert den Generator; Teilnehmende verändern
+weder gemeinsame Dashboards noch Datenquellen oder Control-Zustand.
 
-The traced request graph is `shop-storefront → shop-checkout → shop-payment`. Inventory and
-shipping are separate workloads with intentionally uneven adoption. Their absent signals are
-not an exercise failure. Kubernetes infrastructure signals are separate from application
-instrumentation; seeing infrastructure data does not prove that an application has tracing.
+## Ablauf: 90 Minuten
 
-## Agenda
-
-| Minutes | Activity | Learner outcome |
+| Minuten | Abschnitt | Ergebnis |
 |---|---|---|
-| 0–10 | Orientation | Choose a data source and time range; explain four signals |
-| 10–25 | Metrics | Filter/group measurements and compare services |
-| 25–40 | Logs | Inspect events and extract a request's trace ID |
-| 40–55 | Traces | Read a request graph and correlate a log to its trace |
-| 55–65 | Profiles | Find CPU-consuming functions and explain flame graph width |
-| 65–85 | Investigation | Combine evidence, then verify recovery |
-| 85–90 | Recap | Identify the next instrumentation improvement |
+| 0–10 | Orientierung, Stack und Session-Zettel | Service, Dashboard, Datenquellen und Fenster gefunden |
+| 10–25 | Lab 1, Folie 9: Ihr Signal finden | Eine untersuchbare Frage, noch keine Diagnose |
+| 25–30 | Nachbesprechung | Auswirkung in Geschäftssprache, Unsicherheit benannt |
+| 30–55 | Lab 2, Folie 14: Untersuchen und validieren | Zwei ausgeführte Abfragen über zwei Signaltypen |
+| 55–65 | Evidenz besprechen, Trace-/Profile-Demo | Aussage und Grenze zusätzlicher Signale erklären |
+| 65–85 | Lab 3, Folie 27: Persönlichen Quickstart erstellen | Persönlich speichern, ausführen, prüfen und verfeinern |
+| 85–90 | Abschluss und Wiederverwendung | Nächster Einsatz und Grenzen benannt |
 
-## 0–10: orientation
+## Lab 1 · Deck-Folie 9 · Ihr Signal finden
 
-Open Explore, select the instructor's Prometheus data source, and set **Last 15 minutes**.
-The instructor briefly introduces metrics as aggregate measurements, logs as individual events,
-traces as request paths, and profiles as where execution time is spent. Grafana queries and
-visualizes the data stored in the corresponding backends; changing the Explore data source
-changes the query language.
+### Szenario
 
-In pairs, predict what you could investigate with inventory's metrics alone, and what you would
-need logs, traces, or profiles to establish. Keep this question for the recap.
+Sie haben `shop-checkout` übernommen. Während des auf dem Session-Zettel genannten `{window}`
+hat sich etwas verändert. Sie beheben es noch nicht und diagnostizieren es noch nicht: Sie
+wählen eine Frage, der es sich zu folgen lohnt.
 
-## 10–25: metrics
+### Schritte
 
-Select Prometheus in Explore, use code mode, and run:
+1. Öffnen Sie ein bekanntes Service-Dashboard, sofern es die Workshop-Daten zeigt; sonst `{dashboard}`.
+2. Stellen Sie `{window}` ein. Nutzen Sie für die gemeinsame Untersuchung den absoluten Zeitraum
+   vom Session-Zettel, nicht ein wanderndes „Last 15 minutes“.
+3. Benennen Sie ein Signal und eine Frage. Halten Sie Service und Zeitraum für Lab 2 fest.
 
-```promql
-go_goroutines{blueprint="grafana-cloud-workshop"}
-```
+### Erwartetes Ergebnis und Erfolgskontrolle
 
-Inspect `service`, `namespace`, and `cluster` labels. Narrow the selector with
-`service="shop-checkout"`, then remove it to compare services. A gauge describes a sampled
-state; it is not a count of requests.
+Ein Satz mit Service, Zeitraum und Signal, beispielsweise:
+„Bei `shop-checkout` steigt im markierten Zeitraum die mittlere modellierte HTTP-Dauer;
+treten im selben Zeitraum auch Fehler auf?“ Ergänzen Sie die tatsächlichen Zeiten Ihrer Ansicht.
+Sie können **Service, Zeitraum und Frage** benennen. Eine Ursache ist noch nicht festgestellt.
 
-Compare each service's recent mean observed HTTP duration, in seconds:
+### In der Nachbesprechung
+
+Formulieren Sie die mögliche geschäftliche Bedeutung: „Der Checkout war im beobachteten
+Zeitraum langsamer; ob Kaufabschlüsse betroffen waren, müssen wir noch prüfen.“
+Die Aussage „ein Fünftel der Kundschaft war zwanzig Minuten betroffen“ wäre ohne weitere
+Belege unzulässig. Dieses Blueprint liefert weder echte Kundenzahlen noch Umsatzausfälle.
+Beobachtete Dauer, mögliche Auswirkung und unbekannter Umfang bleiben getrennt.
+
+### Wenn Sie nicht weiterkommen
+
+Öffnen Sie das vorbereitete Szenario-Dashboard mit dem hervorgehobenen Latenz-Panel.
+Beschreiben Sie zunächst nur, **was** sich **wann** verändert – nicht warum.
+
+## Lab 2 · Deck-Folie 14 · Untersuchen und validieren
+
+### Szenario und Schritte
+
+Nehmen Sie Ihre Frage aus Lab 1 mit nach Explore. Halten Sie `shop-checkout` und `{window}`
+durchgehend fest. Nicht gleichzeitig Service und Zeitraum wechseln.
+
+1. Öffnen Sie das relevante Dashboard-Panel in Explore oder den vorbereiteten Metrik-Link.
+2. Prüfen oder verfeinern Sie die eingegrenzte Abfrage. Erklären Sie, was sie tatsächlich misst.
+3. **Wechseln Sie zwingend zu einem zweiten Signaltyp:** von Metriken zu Logs oder Traces.
+   Query Builder und Assistant dürfen beim Entwurf helfen; erst die ausgeführte Abfrage samt
+   Ergebnis ist ein Beleg. Vergleichen Sie denselben Service im selben Zeitfenster.
+
+| Checkliste Untersuchung | Für diese Session festhalten |
+|---|---|
+| Service | `shop-checkout`, Namespace `workshop-shop` |
+| Zeitraum | `{window}` einschließlich Datum und Zeitzone |
+| Abfrage | Datenquelle, Filter, Messgröße und Einheit |
+| Verlauf | Die zwei nützlichen Abfragen und ihre Ergebnisse bzw. Links behalten |
+
+### Erste Abfrage: Metrik
+
+In der Prometheus-Datenquelle ausführen:
 
 ```promql
 sum by (service) (
-  rate(http_server_request_duration_seconds_sum{blueprint="grafana-cloud-workshop"}[5m])
+  rate(http_server_request_duration_seconds_sum{blueprint="grafana-cloud-workshop",service="shop-checkout",namespace="workshop-shop"}[5m])
 )
 /
 sum by (service) (
-  rate(http_server_request_duration_seconds_count{blueprint="grafana-cloud-workshop"}[5m])
+  rate(http_server_request_duration_seconds_count{blueprint="grafana-cloud-workshop",service="shop-checkout",namespace="workshop-shop"}[5m])
 )
 ```
 
-Expected: nonempty measurements for the five services, with healthy latency comparatively stable.
-Explain why counters need a time window and why dividing duration sum by observation count gives
-a mean. These blueprint DSL histograms model observations; their count is **not** literal
-end-user request throughput. Do not use it to assert real request volume or an error ratio.
-No dashboard, recording rule, or Tempo metrics-generator configuration is required for these
-queries. Immediately after startup/restart, allow enough samples for `rate()`.
+Das Verhältnis aus Dauer und Beobachtungszahl ergibt die **mittlere modellierte HTTP-Dauer
+in Sekunden**, nicht p95, Fehlerrate oder die Dauer jedes einzelnen Requests. `[5m]` ist das
+Berechnungsfenster an jedem Graph-Punkt, nicht der gesamte Explore-Zeitraum. Nach Neustart
+braucht `rate()` genügend Samples. Die DSL-Histogrammzählung ist **kein echter Nutzer- oder
+Request-Durchsatz**; daraus keine Kundenzahl oder Fehlerquote berechnen. Fehlende Daten sind nicht null.
 
-Checkpoint: show a service-filtered graph and explain how missing data differs from zero.
+### Zweite Abfrage: Logs
 
-## 25–40: logs
-
-Switch to Loki and run:
+Zur Loki-Datenquelle wechseln, `{window}` unverändert lassen und ausführen:
 
 ```logql
-{blueprint="grafana-cloud-workshop", source="app", service_name="shop-checkout"} | json
+{blueprint="grafana-cloud-workshop",source="app",service_name="shop-checkout",namespace="workshop-shop"} | json
 ```
 
-Expand a line. Inspect JSON fields such as `msg`, `route`, `status`, and `outcome`, alongside
-the `level` stream label. Find `trace_id` and `span_id` in structured metadata. Keep one
-`trace_id` for the next exercise. Trace IDs are deliberately not indexed stream labels.
-
-Compare adoption:
+Prüfen Sie `msg`, `route`, `status` und `outcome` im JSON sowie das Stream-Label `level`.
+Für die Frage nach Fehlern anschließend eingrenzen:
 
 ```logql
-{blueprint="grafana-cloud-workshop", source="app", service_name="shop-shipping"} | json
+{blueprint="grafana-cloud-workshop",source="app",service_name="shop-checkout",namespace="workshop-shop",level="error"} | json
 ```
 
-Shipping has logs, but no corresponding emitted traces. Inventory has no application log stream;
-its absence is intentional. Never assume an identifier alone proves that a trace was ingested.
+Die Metrik zeigt den aggregierten Verlauf; Logs zeigen einzelne Ereignisse und deren Details.
+Fehler im gleichen Fenster können eine Hypothese stützen, beweisen aber keine Ursache der Latenz.
+Ein leeres Fehlerergebnis widerlegt die Hypothese erst dann sinnvoll, wenn die allgemeine
+Logabfrage Daten liefert und Datenquelle, Service und Zeitfenster stimmen.
 
-Checkpoint: explain what a request log adds to the metrics graph and why an empty inventory
-log query does not prove a Loki outage.
+### Alternative oder Vertiefung: Traces
 
-## 40–55: traces and correlation
-
-Select Tempo in Explore and run this TraceQL search:
+In Tempo bei unverändertem `{window}`:
 
 ```traceql
 { resource.service.name = "shop-checkout" && resource.service.namespace = "workshop-shop" }
 ```
 
-Open a result. Locate the storefront, checkout, and payment spans; compare their durations and
-parent/child relationships. A service dependency is not automatically the cause of a problem.
-TraceQL's resource selectors scope the search to this teaching estate; see the official
-[TraceQL query examples](https://grafana.com/docs/grafana/latest/datasources/tempo/query-editor/traceql-query-examples/).
+Einen Treffer öffnen und Checkout-Spans im Request-Pfad
+`shop-storefront → shop-checkout → shop-payment` betrachten. Für Fehlerspans zusätzlich
+`&& status = error` innerhalb der Klammern ergänzen. Abhängigkeit und zeitliches Zusammentreffen
+sind keine Ursachennachweise. Synthetische Metriken und Spans müssen nicht exakt numerisch übereinstimmen.
 
-Use the log's trace link if configured. Otherwise switch to Tempo's **Trace ID** query mode and
-paste the `trace_id` collected in the logs exercise. To move back manually, select Loki and use
-the same trace's time range, replacing the placeholder below:
+Logs enthalten `trace_id` und `span_id` als **strukturierte Metadaten**, nicht im JSON-Body
+oder als indexierte Stream-Labels. Ohne vorkonfigurierte Links: ID aus dem Log kopieren und
+in Tempos Trace-ID-Modus suchen. Zurück zu Loki, im gleichen Zeitraum:
 
 ```logql
-{blueprint="grafana-cloud-workshop", source="app"} | trace_id="REPLACE_WITH_TRACE_ID"
+{blueprint="grafana-cloud-workshop",source="app",service_name="shop-checkout",namespace="workshop-shop"} | trace_id="REPLACE_WITH_TRACE_ID"
 ```
 
-Expected: events sharing that request ID. A trace-ID pipeline filter uses structured metadata;
-`|= "TRACE_ID"` searches the body and is not a suitable fallback here. If links fail but the
-manual query works, fix correlation configuration, not ingestion.
+`|= "TRACE_ID"` durchsucht den Body und ist hier kein Ersatz. Eine Trace-ID allein garantiert
+nicht, dass der Trace tatsächlich ingestiert wurde.
 
-Checkpoint: identify one request across two signals and state which services lack this option.
+### Erwartetes Ergebnis und Erfolgskontrolle
 
-## 55–65: profiles
+Zeigen Sie **zwei ausgeführte Abfragen über zwei Signaltypen**, beide für denselben Service
+und dasselbe Fenster. Notieren Sie zu jeder Abfrage ihre Aussage und Grenze, zum Beispiel:
+„Die Metrik zeigt erhöhte mittlere Dauer; die Logs zeigen im selben Fenster Fehlerereignisse.
+Das stützt gleichzeitige Beeinträchtigung, erklärt aber noch nicht deren Ursache.“
+Ein Widerspruch ist ein gutes Ergebnis: Sie haben Ihre Idee geprüft statt nur bestätigt.
 
-Open Profiles Drilldown or select Pyroscope in Explore. Select profile type
-`process_cpu:cpu:nanoseconds:cpu:nanoseconds` and filter:
+### Wenn Sie nicht weiterkommen
+
+Nutzen Sie die vorbereiteten Explore-Links und vergleichen Sie die beiden benannten Signale.
+Lassen Sie Assistant die Abfrage erklären oder entwerfen, kontrollieren Sie aber Filter,
+Zeitraum, Einheit und Ergebnis. Der Wechsel zum zweiten Signal ist kein optionaler Zusatz.
+
+## 55–65: Zusätzliche Evidenz mit Traces und Profiles
+
+Die Kursleitung zeigt kurz den Trace-Pfad und öffnet Profiles Drilldown oder Pyroscope in Explore.
+Profiltyp `process_cpu:cpu:nanoseconds:cpu:nanoseconds`, gleiches `{window}`, Selektor:
 
 ```text
-{service_name="shop-checkout", service_namespace="workshop-shop"}
+{service_name="shop-checkout",service_namespace="workshop-shop"}
 ```
 
-Use the same time range as your other signals. Inspect the widest frames and their callers.
-Width represents CPU contribution, not a request timeline; compare total and self contribution.
-See Grafana's [profile query editor](https://grafana.com/docs/grafana/latest/datasources/pyroscope/query-editor/).
+Welche Funktionen tragen zur CPU-Zeit bei? Die Breite einer Flamegraph-Fläche steht für
+CPU-Anteil, nicht für einen Request-Zeitstrahl. Ein CPU-Hotspot allein erklärt nicht jede
+Latenz. Ohne getesteten Trace-to-Profile-Link vergleichen wir Service und Zeitraum, nicht
+das Profil eines bestimmten Spans. Die Go-Span-Profile dieser Übung sind CPU-only.
 
-If the instructor configured trace-to-profile links, open a checkout server span and inspect
-its CPU profile. Otherwise query the service and time range manually: this is a service/time
-comparison, not proof of a specific span's profile. Memory or goroutine profiles are not a
-substitute for the CPU span-profile exercise.
+Die Demo ergänzt Lab 2; sie ersetzt die zwei selbst ausgeführten Abfragen nicht.
 
-Checkpoint: explain what a CPU-heavy function tells you that a slow trace alone cannot.
+## Lab 3 · Deck-Folie 27 · Einen persönlichen Quickstart erstellen
 
-## 65–85: a bounded investigation
+### Szenario und Schritte
 
-Only the instructor changes Synthkit state. This drill changes synthetic telemetry, not real
-shop services or the Kubernetes host's CPU consumption. It creates no Grafana incident object.
+Sie werden diese Untersuchung wiederholen. Speichern Sie einen Prompt, mit dem der nächste
+Durchlauf bereits Kontext hat. Halten Sie ihn zunächst persönlich.
 
-1. **Minutes 65–68:** capture a healthy interval. In the operator UI's Scenarios view, activate
-   `grafana-cloud-workshop/checkout-regression` and note the activation time. It combines
-   checkout-targeted latency, error, and CPU-hotspot modes. There is no random activation.
-2. **Minutes 68–76:** participants investigate in pairs. Compare checkout's mean-duration
-   graph with payment. Find checkout error logs using the query below. Search for checkout
-   error spans, inspect the request path, and compare checkout CPU profiles before/during
-   the change. Write down observations separately from hypotheses.
-3. **At minute 76:** the instructor deactivates `checkout-regression` in the UI, even if some
-   groups are still investigating. This bounds the live fault to about eight minutes; the
-   scenario does not automatically expire. Groups can continue using the recorded interval.
-4. **Minutes 76–85:** refresh recent data and verify recovery. The five-minute metrics window
-   mixes healthy and degraded samples until it advances. Logs and traces retain the past
-   errors; their continued presence in a historical window is not an active failure. Compare
-   the recorded healthy/degraded/recovered intervals and present one evidence-backed finding.
+1. Wählen Sie eine wiederkehrende Aufgabe für `shop-checkout`, etwa einen morgendlichen
+   Health-Check. Für die erste Validierung nutzen Sie das bekannte `{window}` aus Lab 2.
+2. Schreiben Sie **Aktion + Service-Geltungsbereich + Zeitraum + @Kontext**. Wählen Sie nach
+   Eingabe von `@` die tatsächlich vorhandene Datenquelle oder das Dashboard aus der Auswahl.
+   `@workshop-shop-logs` ist nur gültig, wenn dieses Objekt wirklich existiert; der Namespace
+   selbst erzeugt keine Datenquelle. Die Kontext-Platzhalter unten vor dem Speichern ersetzen.
+3. Unter **Grafana Assistant → Settings → Quickstart prompts → Create Quickstart Prompt**
+   Titel und Prompt eintragen, **Scope: Just me**, Enabled eingeschaltet lassen und speichern.
+4. Den gespeicherten Quickstart ausführen. Mindestens eine erzeugte Abfrage und ihr Ergebnis
+   prüfen: Service, Fenster, Datenquelle, Messgröße und tatsächlicher Beleg. Mit Lab 2 vergleichen.
+   Den Prompt bei Bedarf präzisieren und erneut ausführen. Nicht auf **Everybody** umstellen.
 
-```logql
-{blueprint="grafana-cloud-workshop", source="app", service_name="shop-checkout", level="error"} | json
-```
+Das persönliche Speichern und die Kontextauswahl folgen der
+[offiziellen Assistant-Anleitung](https://grafana.com/docs/grafana-cloud/platform/grafana-assistant/introduction/).
+Die Kursleitung prüft [Aktivierung und Zugriff](https://grafana.com/docs/grafana-cloud/platform/grafana-assistant/get-started/grafana-cloud/)
+vorab; UI-Verfügbarkeit und Berechtigungen können je Stack abweichen.
 
-```traceql
-{ resource.service.name = "shop-checkout" && resource.service.namespace = "workshop-shop" && status = error }
-```
+### Zwei ausgearbeitete Prompts
 
-Facilitator notes: expected checkout evidence is higher modeled latency, request errors, and
-CPU-hotspot profile changes. Some request-level effects can appear elsewhere in the same graph;
-do not teach that every correlated error proves a second independent fault. The scenario is
-deliberately constructed evidence, not a guarantee that synthetic measurements precisely match
-one another numerically or reproduce a real application's causal performance model.
+**Untersuchung wiederholen – zunächst mit dem absoluten Lab-Fenster:**
 
-## 85–90: recap and repeat
+> Prüfe shop-checkout im Namespace workshop-shop während {window} mit @PROMETHEUS und @LOKI.
+> Zeige die mittlere modellierte HTTP-Dauer und passende Fehlerlogs. Verwende dieselben
+> Service- und Zeitfilter. Zeige beide Abfragen und Ergebnisse; trenne Beobachtungen,
+> Hypothesen und offene Fragen. Nimm keine Änderungen vor.
 
-Ask each pair: Which signal first showed the problem? Which added an explanation? What could
-you have concluded for metrics-only inventory? What instrumentation would you add next?
+`@PROMETHEUS` und `@LOKI` sind Platzhalter für echte ausgewählte Kontextobjekte.
+Nach erfolgreicher Prüfung kann eine persönliche Health-Check-Variante „letzte 30 Minuten“
+verwenden. Sie zeigt nach dem Deaktivieren des Szenarios möglicherweise gesunde Daten –
+das ist kein Fehlverhalten. Ein Quickstart ist kein automatisch laufender Monitor.
 
-The instructor confirms the scenario is inactive and restores defaults using the control reset
-described in [Kubernetes operations](kubernetes.md#reset-the-exercise-not-the-telemetry). Record
-the session's time window if it will be reused. A new class uses fresh windows; it does not need
-telemetry deletion. Participants may retain query links without saving shared dashboards.
+**Vergleichen – nur mit vorhandener Historie:**
 
-## When data is missing
+> Vergleiche die mittlere modellierte HTTP-Dauer von shop-checkout im Namespace workshop-shop
+> in der letzten abgeschlossenen Stunde mit derselben Stunde gestern anhand von @PROMETHEUS.
+> Zeige die genauen Zeitfenster, Abfragen und Unterschiede. Weise auf fehlende Daten hin,
+> statt sie als null zu behandeln. Behaupte keine Ursache ohne weiteren Beleg.
 
-| Observation | Check first |
+Diesen Vergleich nur verwenden, wenn beide Fenster tatsächlich Daten enthalten. Andernfalls
+mit zwei geprüften gesunden/degradierten Zeitfenstern derselben Session vergleichen.
+Eine „Fehlerrate“ nicht aus der DSL-Histogrammzählung ableiten; für den Einstieg Fehlerereignisse
+untersuchen. Eine Quote aus Logs wäre höchstens eine Quote erzeugter Logereignisse, nicht Kundschaft.
+
+### Erwartetes Ergebnis und Erfolgskontrolle
+
+Ein **persönlich gespeicherter und ausgeführter Prompt**, mindestens ein geprüftes Ergebnis
+und eine benannte Verfeinerung oder begründete Entscheidung, ihn so zu behalten.
+Sie können erklären, wann Sie ihn wieder verwenden und welche Daten er braucht.
+Teilen Sie ihn erst mit dem Team, wenn er zuverlässig funktioniert und jemand ihn verantwortet.
+
+### Wenn Sie nicht weiterkommen
+
+Entwerfen Sie den Prompt auf der Lab-Karte und gehen Sie Auswahl des Kontexts, erwartete
+Abfrage und Ergebnisprüfung laut durch. Bei fehlendem Assistant-Zugang oder Speicherrecht
+ist das ein bewusster Fallback, **kein** erfolgreich gespeicherter Quickstart. Zugang nicht
+während des Labs durch neue gemeinsame Berechtigungen improvisieren.
+
+## Abschluss und nächste Durchführung
+
+Welche Frage haben Sie geprüft? Was konnte das zweite Signal ergänzen oder widerlegen?
+Welche Aussage blieb unbelegt? Welchen persönlichen Quickstart würden Sie wiederverwenden?
+
+Die Kursleitung bestätigt, dass das Szenario deaktiviert ist, und setzt den
+[Übungszustand](kubernetes.md#reset-the-exercise-not-the-telemetry) zurück. Der Generator darf
+weiterlaufen. Alte Telemetrie muss nicht gelöscht werden und ist für die nächste Durchführung
+kein Hindernis. Für eine neue Klasse frische Fenster vorbereiten und alle Links neu prüfen;
+ein Pod-Neustart allein ersetzt keinen Reset des persistenten Control-Zustands.
+
+## Referenz: absichtlich ungleichmäßige Instrumentierung
+
+Blueprint `grafana-cloud-workshop`, synthetischer Cluster `workshop-prod`, Namespace `workshop-shop`:
+
+| Service | Metriken | App-Logs | Traces | Profiles |
+|---|---|---|---|---|
+| `shop-storefront` | Ja | Ja | Ja | Ja |
+| `shop-checkout` | Ja | Ja | Ja | Ja |
+| `shop-payment` | Ja | Ja | Ja | Ja |
+| `shop-inventory` | Ja | Nein | Nein | Nein |
+| `shop-shipping` | Ja | Ja | Nein | Nein |
+
+Optionaler Transfer nach den Labs: Was könnten Sie über Inventory mit Metriken allein sagen?
+Fehlende Anwendungssignale sind hier beabsichtigt. Infrastrukturtelemetrie beweist keine
+App-Instrumentierung; eine Log-ID beweist keinen verfügbaren Trace.
+
+### Optionale Verknüpfungen und Fehlerhilfe für die Kursleitung
+
+Gemeinsame IDs konfigurieren keine Grafana-Links. Vor der Session testen oder die manuelle
+Trace-ID-Suche aus Lab 2 verwenden:
+
+- Loki → Tempo: Derived Field vom Typ Label, Matcher `^trace_id$`, interne Tempo-Verknüpfung,
+  Query `${__value.raw}`. Die ID kommt aus strukturierten Metadaten.
+- Tempo → Loki: `service.name` auf `service_name`, `service.namespace` auf `namespace` abbilden;
+  Custom Query `{${__tags}} | trace_id="${__trace.traceId}"`. Kleinen Zeitpuffer erlauben.
+  Kein zwingender `span_id`-Match: App-Logs tragen die Root-Span-ID des Requests.
+- Tempo → Pyroscope: `service.name` auf `service_name`, `service.namespace` auf
+  `service_namespace` abbilden, CPU-Profil auswählen und an einem Go-Server-Span prüfen.
+
+Siehe [Trace-to-Logs](https://grafana.com/docs/grafana/latest/datasources/tempo/configure-tempo-data-source/configure-trace-to-logs/)
+und [Trace-to-Profiles](https://grafana.com/docs/grafana/latest/datasources/tempo/configure-tempo-data-source/configure-trace-to-profiles/).
+Provisionierte Datenquellen können schreibgeschützt sein; unterstützten Provisionierungs-/Klonweg
+verwenden und nicht während der Session Produktionskonfiguration ändern.
+
+| Beobachtung | Zuerst prüfen |
 |---|---|
-| Inventory has no logs/traces/profiles | Expected adoption boundary in the table above |
-| Shipping has no traces/profiles | Expected; logs alone do not imply traced requests |
-| All services lack one signal | Correct data source/time range, then instructor sink status and credentials |
-| All signals absent | Instructor checks dry-run mode, selected blueprint, paused Pod, and readiness |
-| Logs and traces exist but links fail | Manual trace-ID lookup, then data-source mappings |
-| Profiles absent only | Profile credentials, expected service/type, then delivery status; never assume a green metrics lane proves profiles |
-| Old errors remain after recovery | Query a fresh interval or compare explicit before/after windows |
+| Inventory ohne Logs oder Shipping ohne Traces | Erwartete Grenzen laut Tabelle |
+| Alle Services ohne einen Signaltyp | Datenquelle und Fenster, dann Ingest-Status und Zugangsdaten |
+| Alles leer | Dry-run, Blueprint-Auswahl, pausierter Pod und Readiness |
+| Logs/Traces vorhanden, Links defekt | Manuelle ID-Suche, dann Datenquellen-Mappings |
+| Nur Profiles fehlen | Profil-Zugangsdaten, Service/Typ und Zustellstatus |
+| Alte Fehler nach Erholung sichtbar | Historisches Fenster zeigt weiterhin historische Fehler |
 
-For implementation provenance, the exact declarations are in
-[`grafana-cloud-workshop.yaml`](https://github.com/mbaykara/Synthkit/blob/main/blueprints/grafana-cloud-workshop.yaml).
-The [control plane](control-plane.md) describes diagnostics; [troubleshooting](troubleshooting.md)
-describes delivery failures. Learners report problems to the instructor rather than modifying
-tokens, Helm values, or shared control state.
+Quelle der Datenformen ist das
+[`grafana-cloud-workshop`-Blueprint](https://github.com/mbaykara/Synthkit/blob/main/blueprints/grafana-cloud-workshop.yaml).
+Weitere Diagnose: [Control Plane](control-plane.md) und [Troubleshooting](troubleshooting.md).
+Teilnehmende melden Probleme der Kursleitung, statt Tokens, Helm-Werte oder gemeinsame Ressourcen zu ändern.
