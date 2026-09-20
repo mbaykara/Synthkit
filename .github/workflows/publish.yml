@@ -44,6 +44,10 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
+          if [ "${GITHUB_REPOSITORY}" != "rknightion/synthkit" ] && { [ -n "${RELEASE_TAG}" ] || [ "${GITHUB_REF}" != "refs/heads/main" ]; }; then
+            echo "fork publishing supports main edge builds only; release verification remains upstream-specific" >&2
+            exit 1
+          fi
           if [ -n "${RELEASE_TAG}" ] && [ "${GITHUB_REF}" != "refs/tags/${RELEASE_TAG}" ]; then
             echo "release publication must run at its exact tag ref" >&2
             exit 1
@@ -52,6 +56,7 @@ jobs:
 
   image:
     needs: identity
+    if: github.repository == 'rknightion/synthkit'
     permissions:
       contents: write        # SBOMs attached to the release (when release_tag set)
       packages: write
@@ -61,6 +66,24 @@ jobs:
     uses: rknightion/.github/.github/workflows/container-publish.yml@f31690684f4292d1fe8e528618f7c8306fe27d9a # v1.3.1
     with:
       release-tag: ${{ inputs.release_tag }}
+      build-args: |
+        REVISION=${{ needs.identity.outputs.revision }}
+
+  # The older upstream publisher uses github.repository verbatim in registry/cache
+  # paths. This maintained revision accepts an explicit lowercase image name.
+  # Keep the release verifier's upstream signer pin and trust policy unchanged.
+  image-fork:
+    needs: identity
+    if: github.repository == 'mbaykara/Synthkit' && github.ref == 'refs/heads/main' && inputs.release_tag == ''
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+    uses: rknightion/.github/.github/workflows/container-publish.yml@db2707eeb563706efc1b92ec969df0aba0193e02 # image-name support
+    with:
+      image-name: synthkit
       build-args: |
         REVISION=${{ needs.identity.outputs.revision }}
 
@@ -150,7 +173,7 @@ jobs:
   # go-licenses third-party notices (Go-specific; migrates to the shared binaries
   # reusable later). Releases only.
   notices:
-    if: inputs.release_tag != ''
+    if: github.repository == 'rknightion/synthkit' && inputs.release_tag != ''
     runs-on: ubuntu-24.04
     permissions:
       contents: write

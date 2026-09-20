@@ -65,10 +65,26 @@ node; adjust `--platform` deliberately. Alternatively, use your fork's publishin
 obtain the published index digest from its successful build output. Record the revision and
 digest together. These instructions do not imply a workshop image is already published.
 
-The inherited publishing workflow currently passes the GitHub repository name directly to its
-registry output and cache paths. Mixed-case fork names fail Docker's lowercase repository-name
-requirement. Use the explicit lowercase build/push path above until that workflow is normalized;
-do not treat a failed workflow run or an older image as the workshop artifact.
+The fork's `publish` workflow builds on pushes to `main`, or can be dispatched manually on
+`main` with `release_tag` empty. Its `image-fork` job uses the explicit lowercase image name
+`synthkit` and GitHub's automatic `GITHUB_TOKEN` with package-write permission; no personal
+token or repository secret is needed. It builds native AMD64 and ARM64 images, scans before
+pushing, then merges, signs and attests the index. Security failures must be resolved, not bypassed.
+The image tags include `ghcr.io/mbaykara/synthkit:main` and a `main-<short-sha>` tag. After a
+successful run, inspect the published image and pin its index digest in Helm, never the mutable
+`main` tag. The reusable builder checks out the branch ref; avoid advancing `main` during a
+publication and verify the reported source revision. Fork release tags are deliberately rejected:
+the existing release verification trust policy remains specific to upstream.
+
+```bash
+gh workflow run publish.yml --repo mbaykara/Synthkit --ref main
+gh run list --repo mbaykara/Synthkit --workflow publish.yml --limit 5
+docker buildx imagetools inspect ghcr.io/mbaykara/synthkit:main
+```
+
+For a private package, grant the cluster pull access and configure `imagePullSecrets`.
+A successful registry login alone does not establish package-write permission for the manual
+build/push fallback above. Do not treat a failed workflow or an older image as the workshop artifact.
 
 ## 2. Supply credentials outside Helm
 

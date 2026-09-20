@@ -19,6 +19,7 @@ helper-tests:
 
 deploy-tests:
 	python3 -m unittest scripts/test_synthkit_deploy.py
+	python3 -m unittest scripts/test_publish_workflow.py
 
 .PHONY: helm-check
 helm-check: ## validate the Kubernetes chart (requires Helm 3.17+ or Helm 4)
