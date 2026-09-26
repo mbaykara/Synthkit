@@ -258,6 +258,26 @@ historical telemetry, rewrite the blueprint, or reset in-memory counters. Reset 
 class if desired; ordinary restarts intentionally preserve operator state rather than silently
 changing it.
 
+### Control from a Grafana dashboard without cluster access
+
+Instructors can switch scenarios from Grafana instead of port-forwarding, while the control
+Service stays ClusterIP:
+
+1. Deploy the Grafana Private Data Source Connect (PDC) agent in the cluster. Stacks on
+   region-named cells need the agent's `-region-format` flag; without it the key-signing request
+   fails and the agent restarts.
+2. Create an Infinity datasource that uses the PDC network, URL
+   `http://synthkit.synthkit.svc.cluster.local:8088` (also in the allowed hosts), and Basic
+   authentication with user `control` and the `CONTROL_TOKEN` value entered in the datasource form.
+3. Enable the Grafana feature toggle `vizActionsAuth` on the stack. Without it Grafana hides the
+   buttons.
+4. Generate the dashboard with `synthkit-control-dash -action-mode infinity` (see
+   [tools](tools.md)), pointing `-blueprints` at a directory that holds only the workshop blueprint,
+   and import it into an operator-only folder.
+
+Anyone who can query that datasource can send control requests, including from Explore. Grant
+query permission on it only to instructors, and keep the dashboard folder restricted as well.
+
 ### Uninstall and reinstall
 
 To stop generation and remove this release's Deployment/Service, while retaining state:

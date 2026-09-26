@@ -131,9 +131,14 @@ go run ./cmd/synthkit-control-dash \
 | `-out <dir>` | yes | Output directory for generated JSON. |
 | `-write-base-url <url>` | no | Absolute browser-reachable base URL for action-button POSTs. Override per deployment (default is the tailscale-serve endpoint pattern). |
 | `-blueprints <dir>` | no | Directory of blueprint YAML files for enumerating scenarios (default `./blueprints`). |
+| `-action-mode <mode>` | no | `fetch` (default): browser-direct POST buttons. `infinity`: Grafana sends each POST server-side through the Infinity datasource, so its credentials and Private Data Source Connect apply. Requires the Grafana feature toggle `vizActionsAuth`. |
+| `-ds-uid <uid>` | with `infinity` | Infinity datasource UID used by server-side actions. |
 
 When `CONTROL_TOKEN` is set, the Infinity datasource uses secure Basic auth for protected reads;
 browser-direct action POSTs use their own native Basic challenge. No token is embedded in the dashboard JSON.
+In `infinity` mode `-write-base-url` is the address the datasource reaches (for example the in-cluster
+Service through Private Data Source Connect), and anyone allowed to query that datasource can send
+control requests: restrict the datasource and the dashboard folder to operators.
 
 ## LLM-assisted skills
 

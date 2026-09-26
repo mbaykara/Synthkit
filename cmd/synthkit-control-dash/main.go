@@ -10,6 +10,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"os"
@@ -18,11 +19,32 @@ import (
 	"github.com/rknightion/synthkit/dashboard"
 )
 
+const (
+	actionModeFetch    = "fetch"
+	actionModeInfinity = "infinity"
+)
+
 type opts struct {
 	writeBaseURL string
 	dsName       string
+	dsUID        string
+	actionMode   string
 	outDir       string
 	blueprints   string
+}
+
+func (o opts) validate() error {
+	switch o.actionMode {
+	case "", actionModeFetch:
+		return nil
+	case actionModeInfinity:
+		if o.dsUID == "" || o.writeBaseURL == "" {
+			return errors.New("-action-mode infinity requires -ds-uid and -write-base-url (the URL the datasource reaches)")
+		}
+		return nil
+	default:
+		return errors.New("-action-mode must be fetch or infinity")
+	}
 }
 
 func main() {
@@ -32,6 +54,8 @@ func main() {
 	// is the browser-trusted tailscale-serve endpoint; OVERRIDE per-deploy.
 	flag.StringVar(&o.writeBaseURL, "write-base-url", "", "action-button POST base URL (absolute, HTTPS, browser-reachable; per-deploy)")
 	flag.StringVar(&o.dsName, "ds-name", "", "Infinity datasource name (required)")
+	flag.StringVar(&o.actionMode, "action-mode", actionModeFetch, "fetch (browser POST) or infinity (server-side via the datasource; needs Grafana toggle vizActionsAuth)")
+	flag.StringVar(&o.dsUID, "ds-uid", "", "Infinity datasource UID (required with -action-mode infinity)")
 	flag.StringVar(&o.outDir, "out", "", "output directory (required)")
 	flag.StringVar(&o.blueprints, "blueprints", "./blueprints", "directory of *.yaml blueprints to enumerate scenarios from")
 	flag.Parse()
@@ -44,6 +68,9 @@ func main() {
 }
 
 func generate(o opts) error {
+	if err := o.validate(); err != nil {
+		return err
+	}
 	d, err := buildControlDashboard(o)
 	if err != nil {
 		return err

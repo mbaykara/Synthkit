@@ -69,6 +69,59 @@ func TestGenerateWritesValidV2Dashboard(t *testing.T) {
 	}
 }
 
+func TestGenerateInfinityActionMode(t *testing.T) {
+	out := t.TempDir()
+	err := generate(opts{
+		writeBaseURL: "http://synthkit.synthkit.svc.cluster.local:8088",
+		dsName:       "synthkit-control",
+		dsUID:        "synthkit-control-uid",
+		actionMode:   actionModeInfinity,
+		outDir:       out,
+		blueprints:   "../../blueprints",
+	})
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	b, rerr := os.ReadFile(filepath.Join(out, "synthkit-customer-control.json"))
+	if rerr != nil {
+		t.Fatalf("dashboard not written: %v", rerr)
+	}
+	s := string(b)
+	for _, want := range []string{
+		`"type": "infinity"`,
+		`"datasourceUid": "synthkit-control-uid"`,
+		`"url": "http://synthkit.synthkit.svc.cluster.local:8088/control/scenarios"`,
+		`"url": "http://synthkit.synthkit.svc.cluster.local:8088/control/load"`,
+		`"Content-Type"`,
+		`{\"active_scenarios\":[\"grafana-cloud-workshop/payment-regression\"]}`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("infinity dashboard JSON missing %q", want)
+		}
+	}
+	if strings.Contains(s, `"type": "fetch"`) {
+		t.Error("infinity mode must not emit browser fetch actions")
+	}
+}
+
+func TestActionModeValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		o    opts
+		ok   bool
+	}{
+		{"default fetch", opts{}, true},
+		{"infinity complete", opts{actionMode: actionModeInfinity, dsUID: "u", writeBaseURL: "http://h"}, true},
+		{"infinity without uid", opts{actionMode: actionModeInfinity, writeBaseURL: "http://h"}, false},
+		{"infinity without url", opts{actionMode: actionModeInfinity, dsUID: "u"}, false},
+		{"unknown mode", opts{actionMode: "browser"}, false},
+	} {
+		if err := tc.o.validate(); (err == nil) != tc.ok {
+			t.Errorf("%s: validate() = %v, want ok=%v", tc.name, err, tc.ok)
+		}
+	}
+}
+
 func TestLoadScenariosEnumeratesBlueprints(t *testing.T) {
 	scs, err := loadScenarios("../../blueprints")
 	if err != nil {

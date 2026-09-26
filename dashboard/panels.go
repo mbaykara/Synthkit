@@ -501,6 +501,25 @@ func FetchAction(title, url, jsonBody string) *dashboardv2.ActionBuilder {
 			Body(jsonBody))
 }
 
+// InfinityAction builds a type:"infinity" action: Grafana sends the POST server-side through the
+// Infinity datasource, so its stored credentials and Private Data Source Connect apply and the
+// browser never reaches the target. It fires only when the Grafana feature toggle
+// vizActionsAuth is enabled on the stack; without it Grafana drops the action and the board
+// renders empty (click-verified on Grafana 13.3 through Private Data Source Connect).
+func InfinityAction(title, dsUID, url, jsonBody string) *dashboardv2.ActionBuilder {
+	return dashboardv2.NewActionBuilder().
+		Title(title).
+		Type(dashboardv2.ActionTypeInfinity).
+		Confirmation("").
+		OneClick(false).
+		Infinity(dashboardv2.NewInfinityOptionsBuilder().
+			Method(dashboardv2.HttpRequestMethodPOST).
+			Url(url).
+			Body(jsonBody).
+			DatasourceUid(dsUID).
+			Headers([][]string{{"Content-Type", "application/json"}}))
+}
+
 // ActionBoardPanel builds the VERIFIED firing widget: a one-row INLINE-DATA table whose single
 // Actions cell holds N type:"fetch" actions with fixed JSON bodies. The shape (browser
 // click-verified on Grafana 13.1):
@@ -508,7 +527,8 @@ func FetchAction(title, url, jsonBody string) *dashboardv2.ActionBuilder {
 //   - fieldConfig.defaults.custom.cellOptions.type:"actions" (via .CellOptions actions)
 //   - options.showHeader:false                              (the button labels ARE the UI)
 //
-// type:"infinity" actions and "auto"+oneClick cells DO NOT fire — never use them.
+// "auto"+oneClick cells DO NOT fire — never use them. type:"infinity" actions fire only with the
+// vizActionsAuth feature toggle (see InfinityAction); fetch actions need no toggle.
 func ActionBoardPanel(title, dsName string, actions ...*dashboardv2.ActionBuilder) *dashboardv2.PanelBuilder {
 	builders := make([]cog.Builder[dashboardv2.Action], len(actions))
 	for i, a := range actions {
