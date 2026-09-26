@@ -173,6 +173,59 @@ workloads:
         logs: *correlated_logs
         pyroscope: *cpu_profiles
 
+  # Alerting session fleet: Micrometer-style JVM gauges only, one series per pod.
+  - type: app
+    name: workshop-catalog
+    runs_on: workshop-prod
+    traces: false
+    traffic: {off_peak_rps: 1, peak_rps: 1}
+    services:
+      - name: shop-catalog
+        type: web
+        runtime: jvm
+        entry: true
+        namespace: workshop-shop
+        version: "2.4.0"
+        replicas: 12
+        routes: [GET /catalog]
+        # Enum values are the deterministic k8s pod names of this Deployment, so JVM series
+        # join kube_pod_info/cAdvisor; workshop_test.go fails if they drift.
+        metrics:
+          - name: process_cpu_usage
+            instrument: gauge
+            labels:
+              pod: &catalog_pods
+                enum:
+                  - {value: shop-catalog-d7ffc7c86a-0658b, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-39427, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-3996e, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-5510c, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-6daf2, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-81f7b, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-90d93, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-95e68, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-97512, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-9e4ec, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-bb4e9, weight: 1}
+                  - {value: shop-catalog-d7ffc7c86a-d5ac5, weight: 1}
+            # Steady and below the lab card's 0.8 start, so the threshold must be argued.
+            value: {float_range: {min: 0.30, max: 0.72}}
+          - name: jvm_memory_max_bytes
+            instrument: gauge
+            unit: bytes
+            labels:
+              area: {const_str: heap}
+              pod: *catalog_pods
+            value: {const: 536870912}
+          - name: jvm_memory_used_bytes
+            instrument: gauge
+            unit: bytes
+            labels:
+              area: {const_str: heap}
+              pod: *catalog_pods
+            # 74-88% of max on every pod: the chronic memory problem behind the noisy rule.
+            value: {float_range: {min: 397000000, max: 472000000}}
+
 # Definition only: the instructor activates and deactivates this via the control UI.
 scenarios:
   - name: checkout-regression
@@ -182,3 +235,9 @@ scenarios:
       - {mode: latency_storm, target: shop-checkout, intensity: 1}
       - {mode: error_spike, target: shop-checkout, intensity: 1}
       - {mode: cpu_hotspot, target: shop-checkout, intensity: 1}
+  - name: payment-regression
+    title: Payment regression
+    summary: More failed payment requests and slower payment responses.
+    effects:
+      - {mode: error_spike, target: shop-payment, intensity: 1}
+      - {mode: latency_storm, target: shop-payment, intensity: 1}

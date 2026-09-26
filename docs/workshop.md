@@ -10,6 +10,9 @@ zwei Signaltypen prüfen und den nützlichen Ablauf als persönlichen Quickstart
 Die Labs gehören zu den Deck-Folien **9, 14 und 27**. Die Zeitaufteilung unten ist ein
 Moderationsvorschlag; die Foliennummern stammen aus den Lab-Karten.
 
+[English version](workshop-foundation-en.md) · Weitere Sessions auf demselben Stack:
+[Alerting](workshop-alerting-de.md), [Assistant](workshop-assistant-de.md)
+
 Die Kursleitung betreibt Synthkit auf Kubernetes. Alle Teilnehmenden verwenden denselben
 Grafana-Cloud-Stack mit eigenem Grafana-Login und Browser. Kubernetes-Zugang, Ingest-Token und
 Synthkit-Control-Passwort bleiben bei der Kursleitung. Der Shop ist simuliert: Es gibt keine
@@ -325,6 +328,10 @@ Blueprint `grafana-cloud-workshop`, synthetischer Cluster `workshop-prod`, Names
 | `shop-payment` | Ja | Ja | Ja | Ja |
 | `shop-inventory` | Ja | Nein | Nein | Nein |
 | `shop-shipping` | Ja | Ja | Nein | Nein |
+| `shop-catalog` | Ja (nur JVM-Gauges, 12 Pods) | Nein | Nein | Nein |
+
+`shop-catalog` gehört zur [Alerting-Session](workshop-alerting-de.md) und wird in den
+Foundation-Labs nicht verwendet.
 
 Optionaler Transfer nach den Labs: Was könnten Sie über Inventory mit Metriken allein sagen?
 Fehlende Anwendungssignale sind hier beabsichtigt. Infrastrukturtelemetrie beweist keine

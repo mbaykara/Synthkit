@@ -35,7 +35,16 @@ Home = "index.md"
     { Credentials = "credentials.md" },
     { "Quick Start" = "quickstart.md" },
     { "DOMM Qualification Demo" = "domm-qualification.md" },
-    { "Grafana Cloud Workshop" = "workshop.md" },
+]
+
+[[site.nav]]
+"Enablement Workshops" = [
+    { "Foundation (Deutsch)" = "workshop.md" },
+    { "Foundation (English)" = "workshop-foundation-en.md" },
+    { "Alerting (Deutsch)" = "workshop-alerting-de.md" },
+    { "Alerting (English)" = "workshop-alerting-en.md" },
+    { "Assistant (Deutsch)" = "workshop-assistant-de.md" },
+    { "Assistant (English)" = "workshop-assistant-en.md" },
 ]
 
 [[site.nav]]
