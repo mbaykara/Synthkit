@@ -133,6 +133,9 @@ go run ./cmd/synthkit-control-dash \
 | `-blueprints <dir>` | no | Directory of blueprint YAML files for enumerating scenarios (default `./blueprints`). |
 | `-action-mode <mode>` | no | `fetch` (default): browser-direct POST buttons. `infinity`: Grafana sends each POST server-side through the Infinity datasource, so its credentials and Private Data Source Connect apply. Requires the Grafana feature toggle `vizActionsAuth`. |
 | `-ds-uid <uid>` | with `infinity` | Infinity datasource UID used by server-side actions. |
+| `-layout <name>` | no | `customer` (default): volume and scenario knobs. `control-plane`: instructor console with status tiles, one card per scenario with Start/Stop buttons, Business Charts impact charts per affected service (mean response time and error log events) and collapsed fleet controls; defaults to the last 3 hours. Requires `-action-mode infinity` and the Business Charts panel plugin. |
+| `-prom-uid`, `-loki-uid` | with `control-plane` | Prometheus and Loki datasource UIDs for the impact charts. |
+| `-folder <uid>` | no | Target Grafana folder UID; the folder must exist. |
 
 When `CONTROL_TOKEN` is set, the Infinity datasource uses secure Basic auth for protected reads;
 browser-direct action POSTs use their own native Basic challenge. No token is embedded in the dashboard JSON.

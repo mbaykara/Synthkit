@@ -271,9 +271,9 @@ Service stays ClusterIP:
    authentication with user `control` and the `CONTROL_TOKEN` value entered in the datasource form.
 3. Enable the Grafana feature toggle `vizActionsAuth` on the stack. Without it Grafana hides the
    buttons.
-4. Generate the dashboard with `synthkit-control-dash -action-mode infinity` (see
-   [tools](tools.md)), pointing `-blueprints` at a directory that holds only the workshop blueprint,
-   and import it into an operator-only folder.
+4. Generate the dashboard with `synthkit-control-dash -layout control-plane -action-mode infinity`
+   (see [tools](tools.md)), pointing `-blueprints` at a directory that holds only the workshop
+   blueprint, and import it into an operator-only folder.
 
 Anyone who can query that datasource can send control requests, including from Explore. Grant
 query permission on it only to instructors, and keep the dashboard folder restricted as well.

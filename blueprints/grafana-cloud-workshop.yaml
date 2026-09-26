@@ -230,14 +230,14 @@ workloads:
 scenarios:
   - name: checkout-regression
     title: Checkout regression
-    summary: Slow checkout, more failed requests, and a checkout CPU hotspot.
+    summary: Slow checkout, more failed requests, and a checkout CPU hotspot. Run it before the Foundation session.
     effects:
       - {mode: latency_storm, target: shop-checkout, intensity: 1}
       - {mode: error_spike, target: shop-checkout, intensity: 1}
       - {mode: cpu_hotspot, target: shop-checkout, intensity: 1}
   - name: payment-regression
     title: Payment regression
-    summary: More failed payment requests and slower payment responses.
+    summary: More failed payment requests and slower payment responses. Run it for the Assistant investigation lab.
     effects:
       - {mode: error_spike, target: shop-payment, intensity: 1}
       - {mode: latency_storm, target: shop-payment, intensity: 1}

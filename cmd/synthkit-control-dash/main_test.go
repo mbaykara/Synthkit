@@ -104,6 +104,61 @@ func TestGenerateInfinityActionMode(t *testing.T) {
 	}
 }
 
+func TestGenerateControlPlaneLayout(t *testing.T) {
+	out := t.TempDir()
+	bp := t.TempDir()
+	src, err := os.ReadFile("../../blueprints/grafana-cloud-workshop.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bp, "grafana-cloud-workshop.yaml"), src, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err = generate(opts{
+		writeBaseURL: "http://synthkit.synthkit.svc.cluster.local:8088",
+		dsName:       "synthkit-control",
+		dsUID:        "synthkit-control",
+		actionMode:   actionModeInfinity,
+		layout:       layoutControlPlane,
+		folder:       "grafana-training",
+		promUID:      "prom-uid",
+		lokiUID:      "loki-uid",
+		outDir:       out,
+		blueprints:   bp,
+	})
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+	b, rerr := os.ReadFile(filepath.Join(out, "control-plane.json"))
+	if rerr != nil {
+		t.Fatalf("dashboard not written: %v", rerr)
+	}
+	s := string(b)
+	for _, want := range []string{
+		`"title": "Control Plane"`,
+		`"grafana.app/folder": "grafana-training"`,
+		`"from": "now-3h"`,
+		`/control/scenarios/activate`,
+		`/control/scenarios/deactivate`,
+		`{\"scenario\":\"grafana-cloud-workshop/checkout-regression\"}`,
+		`{\"scenario\":\"grafana-cloud-workshop/payment-regression\"}`,
+		`"group": "volkovlabs-echarts-panel"`,
+		`shop-checkout: mean response time`,
+		`shop-payment: error log events per minute`,
+		`"name": "prom-uid"`,
+		`"name": "loki-uid"`,
+		`"backgroundColor": "#ec835a"`,
+		`"collapse": true`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("control-plane JSON missing %q", want)
+		}
+	}
+	if strings.Contains(s, `"type": "fetch"`) || strings.Contains(s, "Stress") {
+		t.Error("control-plane must use server-side actions only and omit the stress preset")
+	}
+}
+
 func TestActionModeValidation(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -115,6 +170,10 @@ func TestActionModeValidation(t *testing.T) {
 		{"infinity without uid", opts{actionMode: actionModeInfinity, writeBaseURL: "http://h"}, false},
 		{"infinity without url", opts{actionMode: actionModeInfinity, dsUID: "u"}, false},
 		{"unknown mode", opts{actionMode: "browser"}, false},
+		{"control-plane complete", opts{layout: layoutControlPlane, actionMode: actionModeInfinity, dsUID: "u", writeBaseURL: "http://h", promUID: "p", lokiUID: "l"}, true},
+		{"control-plane needs infinity", opts{layout: layoutControlPlane, promUID: "p", lokiUID: "l"}, false},
+		{"control-plane needs datasources", opts{layout: layoutControlPlane, actionMode: actionModeInfinity, dsUID: "u", writeBaseURL: "http://h"}, false},
+		{"unknown layout", opts{layout: "grid"}, false},
 	} {
 		if err := tc.o.validate(); (err == nil) != tc.ok {
 			t.Errorf("%s: validate() = %v, want ok=%v", tc.name, err, tc.ok)
